@@ -1,18 +1,22 @@
+import json
 import os
+import sys
 from stat import *
-from typing import List, Any
+from typing import List
 
 from directory_util import DirectoryUtil
 
 
 class ImagesInDirectory:
     """Class to scan a directory and return a list of files with all attributes set"""
-    file_list: List[dict]
+    __file_list: List[dict]
     invalid_types_found: set
 
-    def __init__(self):
-        self.file_list = []
+    def __init__(self, directory_name: str = None):
+        self.__file_list = []
         self.invalid_types_found = set()
+        if directory_name is not None:
+            self.scan(directory_name)
 
     def scan(self, directory_name: str) -> List[dict]:
         """Scanning a given directory for image and video files.
@@ -53,9 +57,9 @@ class ImagesInDirectory:
                                      checksum=util.checksum(item.path),
                                      type=image_type,
                                      kind=image_kind)   # 0 for images, 1 for videos
-                    self.file_list.append(file_item)
+                    self.__file_list.append(file_item)
 
-        return self.file_list
+        return self.__file_list
 
     def __add_invalid_type(self, image_type: str) -> None:
         self.invalid_types_found.add(image_type)
@@ -66,4 +70,10 @@ class ImagesInDirectory:
 
     def get_file_list(self) -> List[dict]:
         """Return the file list, same as return value from scan_directory"""
-        return self.file_list
+        return self.__file_list
+
+
+if __name__ == '__main__':
+    image_dir = ImagesInDirectory(sys.argv[1])
+    image_list = image_dir.get_file_list()
+    print(json.dumps(image_list, indent=4))
