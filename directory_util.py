@@ -5,8 +5,8 @@ from typing import Callable
 
 
 class DirectoryUtil:
-    image_types = {'png', 'jpg', 'jpeg', 'heic', 'bmp', 'gif'}
-    video_types = {'mov', 'avi', 'mp4'}
+    image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef'}
+    video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v'}
 
     def __init__(self):
         pass
