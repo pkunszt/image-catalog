@@ -1,7 +1,6 @@
 import json
 import os
 import sys
-from stat import *
 from typing import List
 
 from directory_util import DirectoryUtil
@@ -10,11 +9,13 @@ from directory_util import DirectoryUtil
 class ImagesInDirectory:
     """Class to scan a directory and return a list of files with all attributes set"""
     __file_list: List[dict]
-    invalid_types_found: set
+    __invalid_types_found: set
+    __valid_types_found: set
 
     def __init__(self, directory_name: str = None):
         self.__file_list = []
-        self.invalid_types_found = set()
+        self.__invalid_types_found = set()
+        self.__valid_types_found = set()
         if directory_name is not None:
             self.scan(directory_name)
 
@@ -34,12 +35,8 @@ class ImagesInDirectory:
         Argument:
         directory_name -- name of the full path of the directory to scan.
         """
-        mode: int = os.stat(directory_name).st_mode
         util = DirectoryUtil()
-
-        # check that the name given is indeed a directory
-        if not S_ISDIR(mode):
-            raise NotADirectoryError(directory_name + " is not a directory!")
+        util.check_that_this_is_a_directory(directory_name)
 
         # scan the directory: fetch all data for files
         with os.scandir(directory_name) as iterator:
@@ -50,6 +47,7 @@ class ImagesInDirectory:
                     image_kind = util.get_kind(image_type, self.__add_invalid_type)
                     if image_kind < 0:
                         continue
+                    self.__valid_types_found.add(image_type)
                     file_item = dict(name=item.name,
                                      path=util.get_path_only(item.path),
                                      size=st.st_size,
@@ -62,11 +60,15 @@ class ImagesInDirectory:
         return self.__file_list
 
     def __add_invalid_type(self, image_type: str) -> None:
-        self.invalid_types_found.add(image_type)
+        self.__invalid_types_found.add(image_type)
 
     def get_invalid_types_found(self) -> set:
         """Return the set of invalid types found, ie files that have not been processed"""
-        return self.invalid_types_found
+        return self.__invalid_types_found
+
+    def get_valid_types_found(self) -> set:
+        """Return the set of valid types found, ie file types that have been processed"""
+        return self.__valid_types_found
 
     def get_file_list(self) -> List[dict]:
         """Return the file list, same as return value from scan_directory"""
@@ -77,3 +79,6 @@ if __name__ == '__main__':
     image_dir = ImagesInDirectory(sys.argv[1])
     image_list = image_dir.get_file_list()
     print(json.dumps(image_list, indent=4))
+    if len(image_dir.get_invalid_types_found()) > 0:
+        print("Invalid file types found:")
+        print(image_dir.get_invalid_types_found())

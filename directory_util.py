@@ -1,9 +1,11 @@
 import hashlib
+import os
+from stat import S_ISDIR
 from typing import Callable
 
 
 class DirectoryUtil:
-    image_types = {'png', 'jpg', 'jpeg', 'heic', 'bmp'}
+    image_types = {'png', 'jpg', 'jpeg', 'heic', 'bmp', 'gif'}
     video_types = {'mov', 'avi', 'mp4'}
 
     def __init__(self):
@@ -47,3 +49,12 @@ class DirectoryUtil:
         if unknown_callback is not None:
             unknown_callback(image_type)
         return -1
+
+    @staticmethod
+    def check_that_this_is_a_directory(directory_name) -> None:
+        mode: int = os.stat(directory_name).st_mode
+
+        # check that the name given is indeed a directory
+        if not S_ISDIR(mode):
+            raise NotADirectoryError(directory_name + " is not a directory!")
+
