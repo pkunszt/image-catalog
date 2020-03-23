@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import sys
@@ -42,22 +43,34 @@ class ImagesInDirectory:
         with os.scandir(directory_name) as iterator:
             for item in iterator:
                 if not item.name.startswith('.') and item.is_file():
-                    st = item.stat()
-                    image_type = util.get_file_type(item.name)
-                    image_kind = util.get_kind(image_type, self.__add_invalid_type)
-                    if image_kind < 0:
-                        continue
-                    self.__valid_types_found.add(image_type)
-                    file_item = dict(name=item.name,
-                                     path=util.get_path_only(item.path),
-                                     size=st.st_size,
-                                     created=st.st_birthtime,
-                                     checksum=util.checksum(item.path),
-                                     type=image_type,
-                                     kind=image_kind)   # 0 for images, 1 for videos
-                    self.__file_list.append(file_item)
+                    self.__add_entry(util, item.name, item.path, item.stat())
 
         return self.__file_list
+
+    def __add_entry(self, util: DirectoryUtil, name: str, path: str, st):
+
+        entry_type = util.get_file_type(name)
+        entry_kind = util.get_kind(entry_type, self.__add_invalid_type)
+        if entry_kind >= 0:
+            entry_name = name
+            entry_path = util.get_path_only(path)
+            entry_size = st.st_size
+            entry_created = st.st_birthtime
+            entry_checksum = util.checksum(path)
+            value = entry_name + entry_path + str(entry_size) + entry_checksum + str(entry_type) + str(entry_kind)
+            entry_hash = hashlib.md5(value.encode()).hexdigest()
+
+            entry = dict(name=entry_name,
+                         path=entry_path,
+                         size=entry_size,
+                         created=entry_created,
+                         checksum=entry_checksum,
+                         type=entry_type,
+                         kind=entry_kind,
+                         hash=entry_hash)
+
+            self.__valid_types_found.add(entry_type)
+            self.__file_list.append(entry)
 
     def __add_invalid_type(self, image_type: str) -> None:
         self.__invalid_types_found.add(image_type)

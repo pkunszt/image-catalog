@@ -1,6 +1,7 @@
 import hashlib
 
 from elasticsearch import Elasticsearch
+from elasticsearch_dsl import Search
 from typing import List, Dict
 
 
