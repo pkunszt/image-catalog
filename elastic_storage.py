@@ -50,7 +50,12 @@ class ElasticStorage:
         count = 0
         for item in items:
             if item['kind'] in kind_map.keys():
-                self.__elastic.index(index=kind_map[item['kind']], body=item)
+                # Check whether the hash is already in the catalog.
+                s = Search(using=self.__elastic, index=kind_map[item['kind']]).filter('term', hash=item['hash'])
+                result = s.execute()
+                # Only store it if it is not there (no hit found on hash).
+                if len(result.hits) == 0:
+                    self.__elastic.index(index=kind_map[item['kind']], body=item)
                 count = count + 1
         return count
 
