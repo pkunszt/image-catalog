@@ -20,10 +20,10 @@ class TestImagesInDirectory(TestCase):
 
     def test_scan(self):
         from images_in_directory import ImagesInDirectory
-        files = ["cartoon.png", "spiderman.jpg", "spidey.jpeg", "thor.jpeg"]
-        sizes = [876273, 28398, 28398, 5906]
-        types = ["png", "jpg", "jpeg", "jpeg"]
-        kinds = [0, 0, 0, 0]
+        files = ["P1030250.MOV", "cartoon.png", "spiderman.jpg", "spidey.jpeg", "thor.jpeg"]
+        sizes = [3691944, 876273, 28398, 28398, 5906]
+        types = ["mov", "png", "jpg", "jpeg", "jpeg"]
+        kinds = [1, 0, 0, 0, 0]
         test_directory = ImagesInDirectory()
 
         file_list = test_directory.scan("./testfiles")

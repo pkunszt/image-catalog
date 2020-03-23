@@ -5,8 +5,7 @@ class TestListAllFileTypes(TestCase):
     def test_scan(self):
         from list_all_file_types import ListAllFileTypes
         test_directory_list = ListAllFileTypes("./testfiles")
-        print(test_directory_list.get_list_of_found_types())
-        self.assertEquals(test_directory_list.get_list_of_found_types(), {"jpg", "png", "jpeg"})
+        self.assertEqual(test_directory_list.get_list_of_found_types(), {"jpg", "png", "jpeg", "mov"})
 
     def test_scan_invalid_directory_to_scan(self):
         from list_all_file_types import ListAllFileTypes
