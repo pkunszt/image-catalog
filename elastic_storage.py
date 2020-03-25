@@ -1,6 +1,4 @@
-import hashlib
-
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search, connections
 from typing import List, Dict
 
@@ -32,7 +30,7 @@ class ElasticStorage:
         self.item_type_to_index_map = {0: self.image_index, 1: self.video_index}
         self.__allow_duplicates = allow_duplicates
 
-    def __get_connection(self, host, port):
+    def __get_connection(self, host: str, port: int) -> None:
         """The connection is reused. On first try there will be no 'elastic' connection. Create it.
         Will create different connections for each host:port combination, by using that in the name."""
 
@@ -43,7 +41,18 @@ class ElasticStorage:
             type(self).__connection.configure(**{connection_name: {'hosts': [host + ':' + str(port)]}})
             self.__elastic = type(self).__connection.get_connection(connection_name)
 
+    def close_connection(self, host: str, port: int) -> None:
+        """Force closing connection to elastic on given host and port. Only use if you know what you are doing"""
+        connection_name = 'elastic'+'host'+str(port)
+        try:
+            type(self).__connection.get_connection(connection_name)
+        except KeyError:
+            return
+        type(self).__connection.remove_connection(connection_name)
+        print("closed connection to "+host+':'+str(port))
+
     def store_image_list(self, images: List[dict], index: str = None) -> int:
+        """Store only images from the given list."""
         kind_map = self.item_type_to_index_map.copy()
         del kind_map[1]
         if index is not None:
@@ -51,6 +60,7 @@ class ElasticStorage:
         return self.__store_list(images, kind_map)
 
     def store_video_list(self, videos: List[dict], index: str = None) -> int:
+        """Store only videos from the given list."""
         kind_map = self.item_type_to_index_map.copy()
         del kind_map[0]
         if index is not None:
@@ -58,6 +68,7 @@ class ElasticStorage:
         return self.__store_list(videos, kind_map)
 
     def store_list(self, items: List[dict], kind_map: Dict[int, str] = None) -> int:
+        """Store both images and videos from the given list."""
         if kind_map is None:
             kind_map = self.item_type_to_index_map
         return self.__store_list(items, kind_map)
@@ -70,9 +81,12 @@ class ElasticStorage:
                 if not self.__allow_duplicates:
                     # Check whether the hash is already in the catalog.
                     s = Search(using=self.__elastic, index=kind_map[item['kind']]).filter('term', hash=item['hash'])
-                    result = s.execute()
-                    hits = len(result.hits)
-                # Only store it if it is not there (no hit found on hash).
+                    try:
+                        result = s.execute()
+                        hits = len(result.hits)
+                    except NotFoundError: # when running for the very first time, the index is not there yet
+                        pass
+                # Only store it if it is not there already (no hit found on hash).
                 if self.__allow_duplicates or hits == 0:
                     self.__elastic.index(index=kind_map[item['kind']], body=item)
                     count = count + 1
@@ -111,7 +125,7 @@ class ElasticStorage:
             raise ElasticStorageError("Failed Delete: expected "+str(len(array_of_ids))+" got "+result('deleted'))
         return result['deleted']
 
-    def delete_id(self, index, _id) -> None:
+    def delete_id(self, index: str, _id: str) -> None:
         id_array = [_id]
         self.delete_id_list(index, id_array)
 
@@ -136,11 +150,3 @@ class ElasticStorage:
             if len(array_of_ids) > 1:
                 print(array_of_ids)
 
-    def close_connection(self, host, port) -> None:
-        connection_name = 'elastic'+'host'+str(port)
-        try:
-            type(self).__connection.get_connection(connection_name)
-        except KeyError:
-            return
-        type(self).__connection.remove_connection(connection_name)
-        print("closed connection to "+host+':'+port)
