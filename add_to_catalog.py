@@ -8,8 +8,8 @@ from images_in_directory import ImagesInDirectory
 
 class AddToCatalog:
     __catalog: ElasticStorage
-    recursive: bool
-    count: int
+    __recursive: bool
+    __count: int
 
     def __init__(self, host: str = 'localhost', port: int = 9200, allow_duplicates: bool = False):
         if not host:
@@ -17,7 +17,7 @@ class AddToCatalog:
         if not port:
             port = 9200
         self.__catalog = ElasticStorage(host, port, allow_duplicates=allow_duplicates)
-        self.count = 0
+        self.__count = 0
 
     def load_from_directory(self, directory_name: str, recursive: bool = True):
         """Scanning a given directory for image and video files.
@@ -28,23 +28,23 @@ class AddToCatalog:
         recurse -- True by default, set to False to not recurse into subdirectories
         """
         DirectoryUtil.check_that_this_is_a_directory(directory_name)
-        self.recursive = recursive
-        self.walktree(directory_name)
+        self.__recursive = recursive
+        self.__walktree(directory_name)
 
-        return self.count
+        return self.__count
 
-    def walktree(self, directory_name: str):
+    def __walktree(self, directory_name: str):
         # scan the directory: fetch all data for files
         with os.scandir(directory_name) as iterator:
             for item in iterator:
-                if item.is_dir() and self.recursive:
-                    self.walktree(item.path)
-        self.add_entries_in_directory(directory_name)
+                if item.is_dir() and self.__recursive:
+                    self.__walktree(item.path)
+        self.__add_entries_in_directory(directory_name)
 
-    def add_entries_in_directory(self, directory_name: str) -> None:
+    def __add_entries_in_directory(self, directory_name: str) -> None:
         image_list = ImagesInDirectory(directory_name)
         entry_list = image_list.get_file_list()
-        self.count = self.count + self.__catalog.store_list(entry_list)
+        self.__count = self.__count + self.__catalog.store_list(entry_list)
 
 
 if __name__ == '__main__':
