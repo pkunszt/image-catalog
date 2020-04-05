@@ -48,29 +48,24 @@ class ImagesInDirectory:
         return self.__file_list
 
     def __add_entry(self, util: DirectoryUtil, name: str, path: str, st):
+        entry = {'type': util.get_file_type(name)}
+        entry['kind'] = util.get_kind(entry['type'], self.__add_invalid_type)
+        if entry['kind'] >= 0:
+            entry['name'] = name
+            entry['path'] = util.get_path_only(path)
+            entry['size'] = st.st_size
+            entry['created'] = st.st_mtime
+            entry['checksum'] = util.checksum(path)
+            entry['hash'] = ImagesInDirectory.get_hash_from_entry(entry)
 
-        entry_type = util.get_file_type(name)
-        entry_kind = util.get_kind(entry_type, self.__add_invalid_type)
-        if entry_kind >= 0:
-            entry_name = name
-            entry_path = util.get_path_only(path)
-            entry_size = st.st_size
-            entry_created = st.st_birthtime
-            entry_checksum = util.checksum(path)
-            value = entry_name + entry_path + str(entry_size) + entry_checksum + str(entry_type) + str(entry_kind)
-            entry_hash = hashlib.md5(value.encode()).hexdigest()
-
-            entry = dict(name=entry_name,
-                         path=entry_path,
-                         size=entry_size,
-                         created=entry_created,
-                         checksum=entry_checksum,
-                         type=entry_type,
-                         kind=entry_kind,
-                         hash=entry_hash)
-
-            self.__valid_types_found.add(entry_type)
+            self.__valid_types_found.add(entry['type'])
             self.__file_list.append(entry)
+
+    @staticmethod
+    def get_hash_from_entry(entry: dict) -> str:
+        value = entry['name'] + entry['path'] + str(entry['size']) +\
+                entry['checksum'] + str(entry['type']) + str(entry['kind'])
+        return hashlib.md5(value.encode()).hexdigest()
 
     def __add_invalid_type(self, image_type: str) -> None:
         self.__invalid_types_found.add(image_type)

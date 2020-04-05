@@ -1,6 +1,5 @@
 import hashlib
 import os
-from stat import S_ISDIR
 from typing import Callable
 
 
@@ -34,10 +33,11 @@ class DirectoryUtil:
     @staticmethod
     def get_path_only(filename: str) -> str:
         """Just keep the path of the file name, dis"""
-        last_slash = filename.rfind('/')
-        if last_slash < 0:
-            return ""
-        return filename[0:last_slash]
+        return os.path.dirname(filename)
+#        last_slash = filename.rfind('/')
+#        if last_slash < 0:
+#            return ""
+#        return filename[0:last_slash]
 
     def get_kind(self, image_type: str, unknown_callback: Callable[[str], None] = None) -> int:
         """Depending on known extensions, return 0 for images, 1 for videos and -1 for unknown.
@@ -52,9 +52,7 @@ class DirectoryUtil:
 
     @staticmethod
     def check_that_this_is_a_directory(directory_name) -> None:
-        mode: int = os.stat(directory_name).st_mode
-
         # check that the name given is indeed a directory
-        if not S_ISDIR(mode):
+        if not os.path.isdir(directory_name):
             raise NotADirectoryError(directory_name + " is not a directory!")
 

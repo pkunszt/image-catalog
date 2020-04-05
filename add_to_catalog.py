@@ -42,8 +42,7 @@ class AddToCatalog:
         self.__add_entries_in_directory(directory_name)
 
     def __add_entries_in_directory(self, directory_name: str) -> None:
-        image_list = ImagesInDirectory(directory_name)
-        entry_list = image_list.get_file_list()
+        entry_list = ImagesInDirectory().scan(directory_name)
         self.__count = self.__count + self.__catalog.store_list(entry_list)
 
 

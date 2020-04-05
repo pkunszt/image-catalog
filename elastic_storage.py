@@ -1,11 +1,11 @@
 from elasticsearch import Elasticsearch, NotFoundError
-from elasticsearch_dsl import Search, connections
+from elasticsearch_dsl import Search, connections, A, UpdateByQuery
 from typing import List, Dict
 
 
 class ElasticStorageError(EnvironmentError):
     def __init__(self, message: str):
-        super(message)
+        super().__init__(message)
 
 
 class ElasticStorage:
@@ -51,20 +51,16 @@ class ElasticStorage:
         type(self).__connection.remove_connection(connection_name)
         print("closed connection to "+host+':'+str(port))
 
-    def store_image_list(self, images: List[dict], index: str = None) -> int:
+    def store_image_list(self, images: List[dict]) -> int:
         """Store only images from the given list."""
         kind_map = self.item_type_to_index_map.copy()
         del kind_map[1]
-        if index is not None:
-            kind_map[0] = index
         return self.__store_list(images, kind_map)
 
-    def store_video_list(self, videos: List[dict], index: str = None) -> int:
+    def store_video_list(self, videos: List[dict]) -> int:
         """Store only videos from the given list."""
         kind_map = self.item_type_to_index_map.copy()
         del kind_map[0]
-        if index is not None:
-            kind_map[1] = index
         return self.__store_list(videos, kind_map)
 
     def store_list(self, items: List[dict], kind_map: Dict[int, str] = None) -> int:
@@ -74,7 +70,7 @@ class ElasticStorage:
         return self.__store_list(items, kind_map)
 
     def __store_list(self, items: List[dict], kind_map: Dict[int, str]) -> int:
-        count = 0
+        count: int = 0
         for item in items:
             if item['kind'] in kind_map.keys():
                 hits = 0
@@ -84,7 +80,7 @@ class ElasticStorage:
                     try:
                         result = s.execute()
                         hits = len(result.hits)
-                    except NotFoundError: # when running for the very first time, the index is not there yet
+                    except NotFoundError:  # when running for the very first time, the index is not there yet
                         pass
                 # Only store it if it is not there already (no hit found on hash).
                 if self.__allow_duplicates or hits == 0:
@@ -92,23 +88,21 @@ class ElasticStorage:
                     count = count + 1
         return count
 
-    def get_all_ids_in_index(self, index: str) -> List:
+    def all_ids_in_index(self, index: str):
         data = self.__elastic.search(index=index, scroll='1m', body={"query": {"match_all": {}}, "stored_fields": []})
-        id_list = []
         while True:
             sid = data['_scroll_id']
             scroll_size = len(data['hits']['hits'])
             for hit in data['hits']['hits']:
-                id_list.append(hit['_id'])
+                yield hit['_id']
             if scroll_size == 0:
                 break
             data = self.__elastic.scroll(scroll_id=sid, scroll='2m')
 
-        return id_list
-
-    def clear_exact_duplicates(self, index: str, dry_run: bool = True) -> int:
+    def clear_exact_duplicates_from_index(self, video: bool = False, dry_run: bool = True) -> int:
         count = 0
-        self.build_duplicate_list_from_full_content(index)
+        index = self.set_index(video)
+        self.build_duplicate_list_from_full_content(video)
         for hash_val, array_of_ids in self.__duplicate_dict.items():
             if len(array_of_ids) > 1:
                 if not dry_run:
@@ -122,31 +116,91 @@ class ElasticStorage:
         if len(result['failures']) > 0:
             raise ElasticStorageError("Failed Delete " + result['failures'])
         if result['deleted'] != len(array_of_ids):
-            raise ElasticStorageError("Failed Delete: expected "+str(len(array_of_ids))+" got "+result('deleted'))
+            err_str = "Failed Delete: expected "+str(len(array_of_ids))+" got "+str(result['deleted'])
+            raise ElasticStorageError(err_str)
         return result['deleted']
 
     def delete_id(self, index: str, _id: str) -> None:
-        id_array = [_id]
-        self.delete_id_list(index, id_array)
+        result = self.__elastic.delete(index=index, id=_id)
+        if result['result'] != 'deleted':
+            raise ElasticStorageError("Failed Delete " + result['result'])
 
-    def build_duplicate_list_from_full_content(self, index: str) -> None:
+    def get_image_by_id(self, i: str):
+        return self.get_by_id(self.image_index, i)
+
+    def get_video_by_id(self, i: str):
+        return self.get_by_id(self.video_index, i)
+
+    def get_by_id(self, index: str, i: str):
+        result = self.__elastic.get(index=index, id=i, _source_includes=['path', 'name'])
+        return result['_source']
+
+    def set_index(self, video: bool = False) -> str:
+        index = self.image_index
+        if video:
+            index = self.video_index
+        return index
+
+    def scan_index(self, video: bool = False, directory_filter: str = None):
+        index = self.set_index(video)
         s = Search(using=self.__elastic, index=index)
+        if directory_filter is not None:
+            s = s.filter('match_phrase', path=directory_filter)
         for entry in s.scan():
-            self.add_dictionary(entry, True)
+            if directory_filter is not None:
+                if entry.path != directory_filter:  # this is needed as elastic will give back too many matches
+                    continue
+            yield entry
 
-    def add_dictionary(self, entry, full_content: bool):
-        if not full_content:
-            hash_val = entry.checksum
-        else:
-            hash_val = entry.hash
-        self.__duplicate_dict.setdefault(hash_val, []).append(entry.meta.id)
+    def build_duplicate_list_from_full_content(self, video: bool = False) -> None:
+        for entry in self.scan_index(video=video):
+            self.__duplicate_dict.setdefault(entry.hash, []).append(entry.meta.id)
 
-    def build_duplicate_list_from_checksum(self, index: str) -> None:
-        s = Search(using=self.__elastic, index=index)
-        for entry in s.scan():
-            self.add_dictionary(entry, False)
+    def build_duplicate_list_from_checksum(self, directory_filter: str = None,
+                                           video: bool = False) -> None:
+        for entry in self.scan_index(video=video, directory_filter=directory_filter):
+            self.__duplicate_dict.setdefault(entry.checksum, []).append(entry.meta.id)
 
+    def clear_duplicate_list(self):
+        self.__duplicate_dict = dict()
+
+    def get_found_duplicate_ids(self) -> list:
+        result = []
         for hash_val, array_of_ids in self.__duplicate_dict.items():
             if len(array_of_ids) > 1:
-                print(array_of_ids)
+                result.append(array_of_ids)  # get last element of list
 
+        return result
+
+    def elastic_connection(self, host: str, port: int):
+        self.__get_connection(host, port)
+        return self.__elastic
+
+    def all_paths(self, video: bool = False):
+        index = self.set_index(video)
+
+        #
+        # Elastic will partition the aggregation result automatically into 20 parts in our case.
+        # The size parameter just has to be large enough to hold a single partition, but
+        # when called, it will just hold 1/20th of the total result set, so far less usually.
+        #
+        # The 'yield' construct makes this method into a generator, to be used as an iterator
+        # in a loop, to retrieve each result individually. It will jump to the next partition
+        # automatically when the current one was exhausted.
+        #
+
+        i = 0
+        partitions = 20
+        while i < partitions:
+            s = Search(using=self.__elastic, index=index).extra(size=0)
+            path_aggregation = A('terms', field='path.keyword', size=999999,
+                                 include={"partition": i, "num_partitions": partitions})
+            s.aggs.bucket('paths', path_aggregation)
+            result = s.execute()
+            for path in result.aggregations.paths.buckets:
+                yield path.key
+            i = i + 1
+
+    def update(self, change, _id: str, video: bool = False):
+        index = self.set_index(video)
+        self.__elastic.update(index=index, id=_id, body={'doc': change})
