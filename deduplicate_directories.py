@@ -43,7 +43,7 @@ class DeduplicateDirectories:
 
     def __find_duplicates(self, directory_name, video: bool = False):
         self.__storage.clear_duplicate_list()
-        self.__duplicates_to_delete = []
+        self.__duplicates_to_delete.clear()
         self.__storage.build_duplicate_list_from_checksum(directory_filter=directory_name, video=video)
         for image_id_list in self.__storage.get_found_duplicate_ids():
             image_list = []
@@ -55,14 +55,17 @@ class DeduplicateDirectories:
                 item['id'] = image_id
                 image_list.append(item)
                 print(item['name'], end=" ; ")
-            print("Selecting:", end=" ")
-            to_delete = self.select_name(image_list)
-            self.__duplicates_to_delete.append(to_delete)
-            print(to_delete['name'])
 
-    def select_name(self, image_list) -> dict:
+            # select the name to keep, add rest to deletion list
+            to_keep = self.select_name_to_keep(image_list)
+            for to_delete in image_list:
+                if to_delete['id'] != to_keep['id']:
+                    self.__duplicates_to_delete.append(to_delete)
+            print("Keeping: {0}/{1}".format(to_keep['path'],to_keep['name']))
+
+    def select_name_to_keep(self, image_list) -> dict:
         for im in image_list:
-            if self.check_date_name(i['name']):
+            if self.check_date_name(im['name']):
                 return im
         return sorted(image_list, key=lambda entry: entry['name'])[0]
 

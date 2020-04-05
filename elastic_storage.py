@@ -147,9 +147,6 @@ class ElasticStorage:
         if directory_filter is not None:
             s = s.filter('match_phrase', path=directory_filter)
         for entry in s.scan():
-            if directory_filter is not None:
-                if entry.path != directory_filter:  # this is needed as elastic will give back too many matches
-                    continue
             yield entry
 
     def build_duplicate_list_from_full_content(self, video: bool = False) -> None:
@@ -159,7 +156,7 @@ class ElasticStorage:
     def build_duplicate_list_from_checksum(self, directory_filter: str = None,
                                            video: bool = False) -> None:
         for entry in self.scan_index(video=video, directory_filter=directory_filter):
-            self.__duplicate_dict.setdefault(entry.checksum, []).append(entry.meta.id)
+            self.__duplicate_dict.setdefault(entry.checksum+entry.path, []).append(entry.meta.id)
 
     def clear_duplicate_list(self):
         self.__duplicate_dict = dict()
