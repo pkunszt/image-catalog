@@ -24,6 +24,7 @@ class DeduplicateDirectories:
             self.__index = index
         self.__storage = ElasticStorage(host, port)
         self.__count = 0
+        self.__duplicates_to_delete = []
 
     def find_duplicate_images(self, directory_name: str):
         """Finding duplicate images per directory and returning a list of found duplicates.
@@ -61,7 +62,7 @@ class DeduplicateDirectories:
             for to_delete in image_list:
                 if to_delete['id'] != to_keep['id']:
                     self.__duplicates_to_delete.append(to_delete)
-            print("Keeping: {0}/{1}".format(to_keep['path'],to_keep['name']))
+            print("Keeping: {0}".format(os.path.join(to_keep['path'], to_keep['name'])))
 
     def select_name_to_keep(self, image_list) -> dict:
         for im in image_list:
@@ -85,7 +86,7 @@ class DeduplicateDirectories:
 
     def delete_duplicates(self, video: bool = False):
         for item in self.__duplicates_to_delete:
-            os.remove(item['path']+'/'+item['name'])
+            os.remove(os.path.join(item['path'], item['name']))
             if not video:
                 self.__storage.delete_id(self.__storage.image_index, item['id'])
             else:
