@@ -61,9 +61,9 @@ class DeduplicateDirectories:
             print(to_delete['name'])
 
     def select_name(self, image_list) -> dict:
-        for i in image_list:
+        for im in image_list:
             if self.check_date_name(i['name']):
-                return i
+                return im
         return sorted(image_list, key=lambda entry: entry['name'])[0]
 
     def check_date_name(self, name) -> bool:
@@ -131,4 +131,3 @@ if __name__ == '__main__':
             i = i + 1
             if i > 10:
                 break
-

@@ -112,5 +112,3 @@ class TestElasticStorage(TestCase):
         for entry in elastic_storage.scan_index():
             self.assertEqual(entry.name, new_entries[entry.meta.id]['name'])
             self.assertEqual(entry.size, new_entries[entry.meta.id]['size'])
-
-

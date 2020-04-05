@@ -55,4 +55,3 @@ class DirectoryUtil:
         # check that the name given is indeed a directory
         if not os.path.isdir(directory_name):
             raise NotADirectoryError(directory_name + " is not a directory!")
-

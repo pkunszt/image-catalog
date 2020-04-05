@@ -62,7 +62,7 @@ class ImagesInDirectory:
             self.__file_list.append(entry)
 
     @staticmethod
-    def get_hash_from_entry(entry: dict) -> str:
+    def get_hash_from_entry(entry: dict) -> object:
         value = entry['name'] + entry['path'] + str(entry['size']) +\
                 entry['checksum'] + str(entry['type']) + str(entry['kind'])
         return hashlib.md5(value.encode()).hexdigest()

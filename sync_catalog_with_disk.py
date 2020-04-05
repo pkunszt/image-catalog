@@ -42,10 +42,11 @@ class SyncCatalogWithDisk:
                 change['size'] = st.st_size
             if st.st_mtime != entry.created:
                 if verbose:
-                    print("{0} date mismatch: catalog has {1} disk has {2}".format(full_path, entry.created, st.st_mtime))
+                    print("{0} date mismatch: catalog has {1} disk has {2}".format(full_path, entry.created, 
+                                                                                   st.st_mtime))
                 new_entry['created'] = st.st_mtime
                 change['created'] = st.st_mtime
-            new_type = DirectoryUtil.get_file_type(full_path)
+            new_type: str = DirectoryUtil.get_file_type(full_path)
             if new_type != entry.type:
                 if verbose:
                     print("{0} type mismatch: catalog has {1} disk has {2}".format(full_path, entry.type, new_type))

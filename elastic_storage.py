@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch, NotFoundError
-from elasticsearch_dsl import Search, connections, A, UpdateByQuery
+from elasticsearch_dsl import Search, connections, A
 from typing import List, Dict
 
 
