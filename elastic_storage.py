@@ -14,10 +14,10 @@ class ElasticStorage:
     __connection: connections.Connections
     __duplicate_dict: dict
 
-    image_index: str
-    video_index: str
+    __image_index: str
+    __video_index: str
 
-    item_type_to_index_map: Dict[int, str]
+    __item_type_to_index_map: Dict[int, str]
 
     # The connection is a static class variable, reused every time
     __connection = connections.Connections()
@@ -25,9 +25,7 @@ class ElasticStorage:
     def __init__(self, host: str = 'localhost', port: int = 9200, allow_duplicates: bool = False):
         self.__duplicate_dict = {}
         self.__get_connection(host, port)
-        self.image_index = 'images'
-        self.video_index = 'videos'
-        self.item_type_to_index_map = {0: self.image_index, 1: self.video_index}
+        self.__set_index(image_index='images', video_index='videos')
         self.__allow_duplicates = allow_duplicates
 
     def __get_connection(self, host: str, port: int) -> None:
@@ -41,6 +39,29 @@ class ElasticStorage:
             type(self).__connection.configure(**{connection_name: {'hosts': [host + ':' + str(port)]}})
             self.__elastic = type(self).__connection.get_connection(connection_name)
 
+    def __set_index(self, image_index: str = None, video_index: str = None):
+        if image_index is not None:
+            self.__image_index = image_index
+        if video_index is not None:
+            self.__video_index = video_index
+        self.__item_type_to_index_map = {0: self.__image_index, 1: self.__video_index}
+
+    @property
+    def image_index(self):
+        return self.__image_index
+
+    @property
+    def video_index(self):
+        return self.__video_index
+
+    @image_index.setter
+    def image_index(self, img):
+        self.__set_index(image_index=img)
+
+    @video_index.setter
+    def video_index(self, vid):
+        self.__set_index(video_index=vid)
+
     def close_connection(self, host: str, port: int) -> None:
         """Force closing connection to elastic on given host and port. Only use if you know what you are doing"""
         connection_name = 'elastic'+'host'+str(port)
@@ -53,20 +74,20 @@ class ElasticStorage:
 
     def store_image_list(self, images: List[dict]) -> int:
         """Store only images from the given list."""
-        kind_map = self.item_type_to_index_map.copy()
+        kind_map = self.__item_type_to_index_map.copy()
         del kind_map[1]
         return self.__store_list(images, kind_map)
 
     def store_video_list(self, videos: List[dict]) -> int:
         """Store only videos from the given list."""
-        kind_map = self.item_type_to_index_map.copy()
+        kind_map = self.__item_type_to_index_map.copy()
         del kind_map[0]
         return self.__store_list(videos, kind_map)
 
     def store_list(self, items: List[dict], kind_map: Dict[int, str] = None) -> int:
         """Store both images and videos from the given list."""
         if kind_map is None:
-            kind_map = self.item_type_to_index_map
+            kind_map = self.__item_type_to_index_map
         return self.__store_list(items, kind_map)
 
     def __store_list(self, items: List[dict], kind_map: Dict[int, str]) -> int:
@@ -101,7 +122,7 @@ class ElasticStorage:
 
     def clear_exact_duplicates_from_index(self, video: bool = False, dry_run: bool = True) -> int:
         count = 0
-        index = self.set_index(video)
+        index = self.get_index(video)
         self.build_duplicate_list_from_full_content(video)
         for hash_val, array_of_ids in self.__duplicate_dict.items():
             if len(array_of_ids) > 1:
@@ -135,14 +156,14 @@ class ElasticStorage:
         result = self.__elastic.get(index=index, id=i, _source_includes=['path', 'name'])
         return result['_source']
 
-    def set_index(self, video: bool = False) -> str:
+    def get_index(self, video: bool = False) -> str:
         index = self.image_index
         if video:
             index = self.video_index
         return index
 
     def scan_index(self, video: bool = False, directory_filter: str = None):
-        index = self.set_index(video)
+        index = self.get_index(video)
         s = Search(using=self.__elastic, index=index)
         if directory_filter is not None:
             s = s.filter('match_phrase', path=directory_filter)
@@ -174,7 +195,7 @@ class ElasticStorage:
         return self.__elastic
 
     def all_paths(self, video: bool = False):
-        index = self.set_index(video)
+        index = self.get_index(video)
 
         #
         # Elastic will partition the aggregation result automatically into 20 parts in our case.
@@ -199,5 +220,5 @@ class ElasticStorage:
             i = i + 1
 
     def update(self, change, _id: str, video: bool = False):
-        index = self.set_index(video)
+        index = self.get_index(video)
         self.__elastic.update(index=index, id=_id, body={'doc': change})

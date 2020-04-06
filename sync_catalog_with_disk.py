@@ -21,13 +21,13 @@ class SyncCatalogWithDisk:
     def sync(self, video: bool = False, directory: str = None, verbose: bool = True):
         self.__count = 0
         for entry in self.__catalog.scan_index(video=video, directory_filter=directory):
-            full_path = entry.path+'/'+entry.name
+            full_path = os.path.join(entry.path, entry.name)
             try:
                 st = os.stat(full_path)
             except FileNotFoundError:
                 if verbose:
                     print("{0} In catalog but not on disk".format(full_path))
-                index = self.__catalog.set_index(video)
+                index = self.__catalog.get_index(video)
                 self.__catalog.delete_id(index, entry.meta.id)
                 self.__count = self.__count + 1
                 continue

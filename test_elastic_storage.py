@@ -24,7 +24,6 @@ class TestElasticStorage(TestCase):
         elastic_storage = ElasticStorage(allow_duplicates=allow_duplicates)
         elastic_storage.image_index = self.testIndex
         elastic_storage.video_index = self.testIndex
-        elastic_storage.item_type_to_index_map = {0: self.testIndex, 1: self.testIndex}
         return elastic_storage
 
     def test_store_image_list(self):
