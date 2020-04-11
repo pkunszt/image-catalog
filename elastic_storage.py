@@ -37,7 +37,7 @@ class ElasticStorage:
             self.__elastic = type(self).__connection.get_connection(connection_name)
         except KeyError:
             type(self).__connection.configure(**{connection_name: {'hosts': [host + ':' + str(port)]}})
-            self.__elastic = type(self).__connection.get_connection(connection_name)
+            self.__get_connection(host, port)
 
     def __set_index(self, image_index: str = None, video_index: str = None):
         if image_index is not None:
@@ -180,7 +180,9 @@ class ElasticStorage:
             self.__duplicate_dict.setdefault(entry.checksum+entry.path, []).append(entry.meta.id)
 
     def clear_duplicate_list(self):
-        self.__duplicate_dict = dict()
+        if self.__duplicate_dict is None:
+            self.__duplicate_dict = dict()
+        self.__duplicate_dict.clear()
 
     def get_found_duplicate_ids(self) -> list:
         result = []

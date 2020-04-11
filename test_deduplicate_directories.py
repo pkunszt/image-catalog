@@ -1,11 +1,7 @@
-import time
-from unittest import TestCase
-from images_in_directory import ImagesInDirectory
-from typing import List
-from elastic_storage import ElasticStorage
+import unittest
 
 
-class TestDeduplicateDirectories(TestCase):
+class TestDeduplicateDirectories(unittest.TestCase):
     testIndex = 'test_unit_deduplicate_directories'
 
     def test_find_duplicates(self):
@@ -32,7 +28,7 @@ class TestDeduplicateDirectories(TestCase):
         item5 = {'id': '666', 'name': 'Eeee'}
         example_list = [item3, item1, item2, item4, item5]
 
-        self.assertEqual(deduplicate.select_name(example_list), item1)
+        self.assertEqual(deduplicate.select_name_to_keep(example_list), item1)
 
     def test_select_name_with_date(self):
         from deduplicate_directories import DeduplicateDirectories
@@ -44,4 +40,8 @@ class TestDeduplicateDirectories(TestCase):
         item5 = {'id': '666', 'name': '2008-08-16 13-45-01 (1).jpg'}
         example_list = [item5, item1, item2, item3, item4]
 
-        self.assertEqual(deduplicate.select_name(example_list), item3)
+        self.assertEqual(deduplicate.select_name_to_keep(example_list), item3)
+
+
+if __name__ == '__main__':
+    unittest.main()
