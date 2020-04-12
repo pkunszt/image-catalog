@@ -55,17 +55,17 @@ class Store:
                 pass   # if the kind is not there or not 0 or 1 (ie image or video), ignore
         return count
 
-    def image_list(self, entries: Generator) -> int:
+    def video_list(self, entries: Generator) -> int:
         self.index.map.pop(0)
         count = self.list(entries)
         self.index.image = self.index.image
         return count
 
-    def video_list(self, entries: Generator) -> int:
+    def image_list(self, entries: Generator) -> int:
         self.index.map.pop(1)
         count = self.list(entries)
         self.index.video = self.index.video
         return count
 
-    def update(self, change, _id: str):
-        self.__elastic.update(index=self.index, id=_id, body={'doc': change})
+    def update(self, change, _id: str, kind: int):
+        self.__elastic.update(index=self.index.from_kind(kind), id=_id, body={'doc': change})
