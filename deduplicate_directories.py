@@ -2,11 +2,11 @@ import os
 import argparse
 import re
 
-from elastic_storage import ElasticStorage
+from elastic.connection import Connection
 
 
 class DeduplicateDirectories:
-    __storage: ElasticStorage
+    __storage: Connection
     __recursive: bool
     __image_id_list: list
     __video_id_list: list
@@ -22,7 +22,7 @@ class DeduplicateDirectories:
             port = 9200
         if index is not None:
             self.__index = index
-        self.__storage = ElasticStorage(host, port)
+        self.__storage = Connection(host, port)
         self.__count = 0
         self.__duplicates_to_delete = []
 
@@ -106,6 +106,43 @@ def deduplicate_videos_directory(dirname):
     deduplicate.find_duplicate_videos(dirname)
     if not args.printonly:
         deduplicate.delete_duplicates(video=True)
+
+
+    def clear_exact_duplicates_from_index(self, video: bool = False, dry_run: bool = True) -> int:
+        count = 0
+        index = self.get_index(video)
+        self.build_duplicate_list_from_full_content(video)
+        for hash_val, array_of_ids in self.__duplicate_dict.items():
+            if len(array_of_ids) > 1:
+                if not dry_run:
+                    self.delete_id_list(index, array_of_ids[1:])
+                count = count + len(array_of_ids) - 1
+
+        return count
+
+
+    def build_duplicate_list_from_full_content(self, video: bool = False) -> None:
+        for entry in self.scan_index(video=video):
+            self.__duplicate_dict.setdefault(entry.hash, []).append(entry.meta.id)
+
+    def build_duplicate_list_from_checksum(self, directory_filter: str = None,
+                                           video: bool = False) -> None:
+        for entry in self.scan_index(video=video, directory_filter=directory_filter):
+            self.__duplicate_dict.setdefault(entry.checksum+entry.path, []).append(entry.meta.id)
+
+    def clear_duplicate_list(self):
+        if self.__duplicate_dict is None:
+            self.__duplicate_dict = dict()
+        self.__duplicate_dict.clear()
+
+    def get_found_duplicate_ids(self) -> list:
+        result = []
+        for hash_val, array_of_ids in self.__duplicate_dict.items():
+            if len(array_of_ids) > 1:
+                result.append(array_of_ids)  # get last element of list
+
+        return result
+
 
 
 if __name__ == '__main__':

@@ -1,13 +1,13 @@
 import os
 import argparse
 
-from directory_util import DirectoryUtil
-from elastic_storage import ElasticStorage
+from directory.util import Util
+from elastic.connection import Connection
 from images_in_directory import ImagesInDirectory
 
 
 class SyncCatalogWithDisk:
-    __catalog: ElasticStorage
+    __catalog: Connection
     __count: int
 
     def __init__(self, host: str = 'localhost', port: int = 9200):
@@ -15,7 +15,7 @@ class SyncCatalogWithDisk:
             host = 'localhost'
         if not port:
             port = 9200
-        self.__catalog = ElasticStorage(host, port)
+        self.__catalog = Connection(host, port)
         self.__count = 0
 
     def sync(self, video: bool = False, directory: str = None, verbose: bool = True):
@@ -46,7 +46,7 @@ class SyncCatalogWithDisk:
                                                                                    st.st_mtime))
                 new_entry['created'] = st.st_mtime
                 change['created'] = st.st_mtime
-            new_type: str = DirectoryUtil.get_file_type(full_path)
+            new_type: str = Util.get_file_type(full_path)
             if new_type != entry.type:
                 if verbose:
                     print("{0} type mismatch: catalog has {1} disk has {2}".format(full_path, entry.type, new_type))

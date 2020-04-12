@@ -2,26 +2,27 @@ import time
 from unittest import TestCase
 from images_in_directory import ImagesInDirectory
 from typing import List
-from elastic_storage import ElasticStorage
+from elastic.connection import Connection
+from directory.read import Reader
 
 
-class TestElasticStorage(TestCase):
+class TestStorage(TestCase):
     sorted_list: List
     testIndex = 'test_unit_elastic_storage'
-    testDirectory = './testfiles'
+    testDirectory = '../testfiles'
 
     def setUp(self) -> None:
         time.sleep(1)
-        test_directory = ImagesInDirectory()
-        file_list = test_directory.scan(self.testDirectory)
-        self.sorted_list = sorted(file_list, key=lambda i: i['name'])
-        elastic_storage = ElasticStorage()
+        test_directory = Reader()
+        file_list = test_directory.read(self.testDirectory)
+        self.sorted_list = sorted(file_list, key=lambda i: i.name)
+        elastic_storage = Connection()
         for _id in elastic_storage.all_ids_in_index(self.testIndex):
             elastic_storage.delete_id(self.testIndex, _id)
         time.sleep(1)
 
     def get_elastic_storage(self, allow_duplicates: bool = False):
-        elastic_storage = ElasticStorage(allow_duplicates=allow_duplicates)
+        elastic_storage = Connection(allow_duplicates=allow_duplicates)
         elastic_storage.image_index = self.testIndex
         elastic_storage.video_index = self.testIndex
         return elastic_storage

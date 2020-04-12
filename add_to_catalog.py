@@ -1,49 +1,17 @@
 import os
 import argparse
-
-from directory_util import DirectoryUtil
-from elastic_storage import ElasticStorage
-from images_in_directory import ImagesInDirectory
+import elastic
+import directory
 
 
-class AddToCatalog:
-    __catalog: ElasticStorage
-    __recursive: bool
-    __count: int
-
-    def __init__(self, host: str = 'localhost', port: int = 9200, allow_duplicates: bool = False):
-        if not host:
-            host = 'localhost'
-        if not port:
-            port = 9200
-        self.__catalog = ElasticStorage(host, port, allow_duplicates=allow_duplicates)
-        self.__count = 0
-
-    def load_from_directory(self, directory_name: str, recursive: bool = True):
-        """Scanning a given directory for image and video files.
-        Adds all found items to the catalog. By default it recurses into subdirs.
-
-        Arguments:
-        directory_name -- name of the full path of the directory to scan.
-        recurse -- True by default, set to False to not recurse into subdirectories
-        """
-        DirectoryUtil.check_that_this_is_a_directory(directory_name)
-        self.__recursive = recursive
-        self.__walktree(directory_name)
-
-        return self.__count
-
-    def __walktree(self, directory_name: str):
-        # scan the directory: fetch all data for files
-        with os.scandir(directory_name) as iterator:
-            for item in iterator:
-                if item.is_dir() and self.__recursive:
-                    self.__walktree(item.path)
-        self.__add_entries_in_directory(directory_name)
-
-    def __add_entries_in_directory(self, directory_name: str) -> None:
-        entry_list = ImagesInDirectory().scan(directory_name)
-        self.__count = self.__count + self.__catalog.store_list(entry_list)
+def walktree(directory_name: str):
+    with os.scandir(directory_name) as iterator:
+        for item in iterator:
+            if item.is_dir() and args.recursive:
+                walktree(item.path)
+    folder.read(directory_name)
+    global c
+    c = c + store.list(folder.files)
 
 
 if __name__ == '__main__':
@@ -54,5 +22,11 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
     parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
     args = parser.parse_args()
-    add_to_catalog = AddToCatalog(args.host, args.port, allow_duplicates=args.allow_duplicates)
-    print(add_to_catalog.load_from_directory(args.dirname, args.recursive))
+
+    connection = elastic.Connection(args.host, args.port)
+    store = elastic.Store(connection.get(), index=elastic.Index(), allow_duplicates=args.allow_duplicates)
+    folder = directory.Reader()
+    c = 0
+    walktree(args.dirname)
+    print(f"Added {c} entries to catalog.")
+    print(f"Invalid types found: {folder.invalid_types}")

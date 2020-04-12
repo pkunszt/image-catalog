@@ -1,0 +1,70 @@
+from elasticsearch import Elasticsearch
+from elasticsearch_dsl import connections
+from elastic.index import Index
+
+
+class Connection:
+    """Class to store json data in elastic"""
+    __elastic: Elasticsearch
+    __connection: connections.Connections
+    __duplicate_dict: dict
+    __host: str
+    __port: int
+    __index: Index
+
+    # The connection is a static class variable, reused every time
+    __connection = connections.Connections()
+
+    def __init__(self, host: str = 'localhost', port: int = 9200):
+        self.__duplicate_dict = {}
+        self.__host = host
+        self.__port = port
+
+    @property
+    def host(self) -> str:
+        return self.__host
+
+    @property
+    def port(self) -> int:
+        return self.__port
+
+    @host.setter
+    def host(self, host: str):
+        self.__host = host
+
+    @port.setter
+    def port(self, port: int):
+        self.__port = port
+
+    @property
+    def connection_name(self) -> str:
+        return 'elastic' + self.host + str(self.port)
+
+    @property
+    def index(self) -> Index:
+        return self.__index
+
+    @index.setter
+    def index(self, i: index):
+        __index = i
+
+    def get(self) -> Elasticsearch:
+        """The connection is reused. On first try there will be no 'elastic' connection. Create it.
+        Will create different connections for each host:port combination, by using that in the name."""
+
+        try:
+            self.__elastic = type(self).__connection.get_connection(self.connection_name)
+        except KeyError:
+            type(self).__connection.configure(**{self.connection_name: {'hosts': [self.__host + ':' + str(self.__port)]}})
+            return self.get()
+
+        return self.__elastic
+
+    def close(self) -> None:
+        """Force closing connection to elastic on given host and port. Only use if you know what you are doing"""
+        try:
+            type(self).__connection.get_connection(self.connection_name)
+        except KeyError:
+            return
+        type(self).__connection.remove_connection(self.connection_name)
+        print("closed connection to "+self.host+':'+str(self.port))

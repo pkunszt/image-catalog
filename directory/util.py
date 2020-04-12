@@ -1,9 +1,8 @@
 import hashlib
 import os
-from typing import Callable
 
 
-class DirectoryUtil:
+class Util:
 
     def __init__(self):
         pass
@@ -16,7 +15,6 @@ class DirectoryUtil:
             for chunk in iter(lambda: f.read(8192), b""):
                 file_hash.update(chunk)
         return file_hash.hexdigest()
-
 
     @staticmethod
     def check_that_this_is_a_directory(directory_name) -> None:

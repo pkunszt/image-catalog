@@ -1,4 +1,4 @@
-from entry import Entry
+from data.entry import Entry
 
 
 class InvalidVideoError(ValueError):

@@ -3,6 +3,11 @@ import datetime
 import hashlib
 
 
+class EntryException(LookupError):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class Entry:
 
     _name: str
@@ -56,6 +61,8 @@ class Entry:
 
     @name.setter
     def name(self, name: str):
+        if name.find(os.path.sep) >= 0:
+            raise EntryException(f"File name given must just be a name, not a path: {name}")
         base, image_type = os.path.splitext(name)
         self._name = name
         self._type = image_type.lower()[1:]
@@ -74,11 +81,11 @@ class Entry:
 
     @date.setter
     def date(self, date: int):
-        self._date = date
+        self._date = int(date)
 
     @checksum.setter
     def checksum(self, checksum: str):
         self._checksum = checksum
 
     def to_dict(self):
-        pass
+        raise EntryException("to_dict called on base class Entry")

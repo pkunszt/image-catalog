@@ -12,4 +12,4 @@ class TestListAllFileTypes(TestCase):
         test_directory = ListAllFileTypes()
 
         self.assertRaises(FileNotFoundError, test_directory.scan, "blah")
-        self.assertRaises(NotADirectoryError, test_directory.scan, "./test_images_in_directory.py")
+        self.assertRaises(NotADirectoryError, test_directory.scan, "./test_read.py")
