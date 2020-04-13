@@ -9,7 +9,7 @@ def walktree(directory_name: str):
             if item.is_dir() and args.recursive:
                 walktree(item.path)
             if not item.name.startswith('.') and item.is_file():
-                valid_types.add(os.path.splitext(item.name)[1])
+                types.add(os.path.splitext(item.name)[1])
 
 
 if __name__ == '__main__':
@@ -18,6 +18,6 @@ if __name__ == '__main__':
     parser.add_argument('--recursive', '-r', action='store_true', help='recurse into subdirectories. Default: false')
     args = parser.parse_args()
 
-    valid_types = set()
+    types = set()
     walktree(args.dirname)
-    print(valid_types)
+    print(types)

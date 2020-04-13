@@ -11,12 +11,10 @@ class Reader:
     __invalid_types_found: set
     __valid_types_found: set
 
-    def __init__(self, directory_name: str = None):
+    def __init__(self):
         self.__file_list = []
         self.__invalid_types_found = set()
         self.__valid_types_found = set()
-        if directory_name is not None:
-            self.read(directory_name)
 
     def read(self, directory_name: str) -> None:
         """Read from a given directory all image and video files.

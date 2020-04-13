@@ -7,7 +7,8 @@ if __name__ == '__main__':
     parser.add_argument('dirname', type=str, help='name of directory to catalog')
     args = parser.parse_args()
 
-    folder = Reader(args.dirname)
+    folder = Reader()
+    folder.read(args.dirname)
     print(json.dumps(folder.file_list_as_dict(), indent=4))
     if len(folder.invalid_types) > 0:
         print("Invalid file types found:")

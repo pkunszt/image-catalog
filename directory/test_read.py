@@ -9,8 +9,10 @@ class TestReader(TestCase):
         sizes = [3691944, 876273, 28398, 28398, 5906]
         types = ["mov", "png", "jpg", "jpeg", "jpeg"]
         kinds = [1, 0, 0, 0, 0]
-        test_directory = Reader("../testfiles")
+        test_directory = Reader()
+        test_directory.read("../testfiles")
         sorted_list = sorted(test_directory.file_list, key=lambda entry: entry.name)
+        self.assertIn('.md', test_directory.invalid_types)
 
         for i in range(0, len(sorted_list)):
             self.assertEqual(files[i], sorted_list[i].name)
