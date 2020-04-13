@@ -3,7 +3,7 @@ from unittest import TestCase
 
 class TestReader(TestCase):
 
-    def test_scan(self):
+    def test_read(self):
         from directory.read import Reader
         files = ["P1030250.MOV", "cartoon.png", "spiderman.jpg", "spidey.jpeg", "thor.jpeg"]
         sizes = [3691944, 876273, 28398, 28398, 5906]
@@ -18,7 +18,7 @@ class TestReader(TestCase):
             self.assertEqual(types[i], sorted_list[i].type)
             self.assertEqual(kinds[i], sorted_list[i].kind)
 
-    def test_scan_invalid_directory_to_scan(self):
+    def test_scan_invalid_directory_to_read(self):
         from directory.read import Reader
         test_directory = Reader()
 

@@ -1,5 +1,12 @@
-from data.video import Video
+from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
+from directory.util import Util
+import os
+
+
+class FactoryError(ValueError):
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
 class Factory:
@@ -27,3 +34,35 @@ class Factory:
         item.id = e.meta.id
 
         return item
+
+    @staticmethod
+    def from_directory_item(path: str, st: os.stat_result):
+        try:
+            return Factory.__image_from_directory_item(path, st)
+        except InvalidImageError:
+            pass
+
+        try:
+            return Factory.__video_from_directory_item(path, st)
+        except InvalidVideoError:
+            pass
+
+        raise FactoryError(f"Path {path} is neither image nor video")
+
+    @staticmethod
+    def __image_from_directory_item(path: str, st: os.stat_result) -> Image:
+        image = Image()
+        image.full_path = path
+        image.date = st.st_mtime
+        image.size = st.st_size
+        image.checksum = Util.checksum(path)
+        return image
+
+    @staticmethod
+    def __video_from_directory_item(path: str, st: os.stat_result) -> Video:
+        video = Video()
+        video.full_path = path
+        video.date = st.st_mtime
+        video.size = st.st_size
+        video.checksum = Util.checksum(path)
+        return video
