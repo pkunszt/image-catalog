@@ -1,9 +1,7 @@
 import os
 import argparse
-
-from directory.util import Util
-from elastic.connection import Connection
-from images_in_directory import ImagesInDirectory
+import elastic
+import directory
 
 
 class SyncCatalogWithDisk:
@@ -28,7 +26,7 @@ class SyncCatalogWithDisk:
                 if verbose:
                     print("{0} In catalog but not on disk".format(full_path))
                 index = self.__catalog.get_index(video)
-                self.__catalog.delete_id(index, entry.meta.id)
+                self.__catalog.id(index, entry.meta.id)
                 self.__count = self.__count + 1
                 continue
 
@@ -77,6 +75,25 @@ class SyncCatalogWithDisk:
         return new_entry
 
 
+def check(entry):
+    full_path = os.path.join(entry.path, entry.name)
+
+    # first, check if catalog entry actually exists on disk.
+    # remove from catalog if not
+    try:
+        st = os.stat(full_path)
+    except FileNotFoundError:
+        if not args.quiet:
+            print("{0} In catalog but not on disk".format(full_path))
+        deleter.id(index.from_kind(entry.kind), entry.meta.id)
+        global deleted
+        deleted = deleted + 1
+        return
+
+    change = dict()
+    detect_change_in_size(entry, st.st_size)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sync catalog with the data on disk')
     parser.add_argument('dirname', nargs='?', type=str, help='name of directory to look at')
@@ -85,6 +102,22 @@ if __name__ == '__main__':
     parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
     parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
     args = parser.parse_args()
+
+    index = elastic.Index()
+    connection = elastic.Connection(args.host, args.port)
+    store = elastic.Store(connection.get(), index=index)
+    reader = elastic.Retrieve(connection)
+    deleter = elastic.Delete(connection)
+
+    index_to_look_at = index.image
+    if args.video:
+        index_to_look_at = index.video
+
+    updated = 0
+    deleted = 0
+    for entry in reader.all_entries(index_to_look_at, args.dirname):
+        check(entry)
+
     sync_catalog = SyncCatalogWithDisk(args.host, args.port)
     print("updated: {0} entries ".format(sync_catalog.sync(video=args.video, directory=args.dirname,
                                                            verbose=not args.quiet)))

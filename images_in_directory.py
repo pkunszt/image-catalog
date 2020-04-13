@@ -1,11 +1,14 @@
-import sys
+import argparse
 import json
 from directory import Reader
 
 if __name__ == '__main__':
-    image_dir = Reader(sys.argv[1])
-    image_list = image_dir.file_list_as_dict()
-    print(json.dumps(image_list, indent=4))
-    if len(image_dir.invalid_types) > 0:
+    parser = argparse.ArgumentParser(description='List all image and video files in the given directory')
+    parser.add_argument('dirname', type=str, help='name of directory to catalog')
+    args = parser.parse_args()
+
+    folder = Reader(args.dirname)
+    print(json.dumps(folder.file_list_as_dict(), indent=4))
+    if len(folder.invalid_types) > 0:
         print("Invalid file types found:")
-        print(image_dir.invalid_types)
+        print(folder.invalid_types)

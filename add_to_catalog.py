@@ -21,10 +21,14 @@ if __name__ == '__main__':
     parser.add_argument('--allow_duplicates', '-d', action='store_true', help='Duplicates are not ok by default.')
     parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
     parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
+    parser.add_argument('--index', type=str, help='the index in elastic. Defauls to ''catalog''')
     args = parser.parse_args()
 
     connection = elastic.Connection(args.host, args.port)
-    store = elastic.Store(connection.get(), index=elastic.Index(), allow_duplicates=args.allow_duplicates)
+    if args.index is not None:
+        connection.index = args.index
+    store = elastic.Store(connection, allow_duplicates=args.allow_duplicates)
+
     folder = directory.Reader()
     c = 0
     walktree(args.dirname)

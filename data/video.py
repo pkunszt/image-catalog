@@ -12,7 +12,7 @@ class Video(Entry):
     __video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v'}
 
     def __init__(self):
-        pass
+        self.id = 0
 
     @property
     def kind(self):

@@ -1,20 +1,24 @@
 from typing import Generator
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search
-from elastic.index import Index
+from elastic.connection import Connection
+
+
+class StorageError(ValueError):
+    def __init__(self, message: str):
+        super().__init__(message)
 
 
 class Store:
 
     __elastic: Elasticsearch
     __allow_duplicates: bool
-    __index: Index
+    __index: str
 
-    def __init__(self, elastic, index: Index = None, allow_duplicates: bool = False):
-        self.__elastic = elastic
+    def __init__(self, connection: Connection, allow_duplicates: bool = False):
+        self.__elastic = connection.get()
+        self.__index = connection.index
         self.__allow_duplicates = allow_duplicates
-        if index is not None:
-            self.__index = index
 
     @property
     def allow_duplicates(self) -> bool:
@@ -25,12 +29,8 @@ class Store:
         self.__allow_duplicates = flag
 
     @property
-    def index(self) -> Index:
+    def index(self) -> str:
         return self.__index
-
-    @index.setter
-    def index(self, i: Index):
-        self.__index = i
 
     @property
     def elastic(self):
@@ -39,33 +39,20 @@ class Store:
     def list(self, entries: Generator) -> int:
         count = 0
         for e in entries:
+            if e.kind not in (0, 1):
+                raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
             hits = 0
-            try:
-                if not self.allow_duplicates:
-                    s = Search(using=self.elastic, index=self.index.from_kind(e.kind)).filter('term', hash=e.hash)
-                    try:
-                        result = s.execute()
-                        hits = len(result.hits)
-                    except NotFoundError:
-                        pass
-                if self.allow_duplicates or hits == 0:
-                    self.elastic.index(index=self.index.from_kind(e.kind), body=e.to_dict())
-                    count = count + 1
-            except KeyError:
-                pass   # if the kind is not there or not 0 or 1 (ie image or video), ignore
+            if not self.allow_duplicates:
+                s = Search(using=self.elastic, index=self.index).filter('term', hash=e.hash)
+                try:
+                    result = s.execute()
+                    hits = len(result.hits)
+                except NotFoundError:
+                    pass
+            if self.allow_duplicates or hits == 0:
+                self.elastic.index(index=self.index, body=e.to_dict())
+                count = count + 1
         return count
 
-    def video_list(self, entries: Generator) -> int:
-        self.index.map.pop(0)
-        count = self.list(entries)
-        self.index.image = self.index.image
-        return count
-
-    def image_list(self, entries: Generator) -> int:
-        self.index.map.pop(1)
-        count = self.list(entries)
-        self.index.video = self.index.video
-        return count
-
-    def update(self, change, _id: str, kind: int):
-        self.__elastic.update(index=self.index.from_kind(kind), id=_id, body={'doc': change})
+    def update(self, change, _id: str):
+        self.elastic.update(index=self.index, id=_id, body={'doc': change})

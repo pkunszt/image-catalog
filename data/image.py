@@ -12,7 +12,7 @@ class Image(Entry):
     __image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef'}
 
     def __init__(self):
-        pass
+        self.id = 0
 
     @property
     def kind(self):
@@ -31,7 +31,6 @@ class Image(Entry):
             path=self.path,
             size=self.size,
             created=self.date,
-#            datetime=self.datetime_str,
             type=self.type,
             kind=self.kind,
             hash=self.hash,

@@ -2,8 +2,8 @@ import os
 import argparse
 import re
 
-from elastic.connection import Connection
-
+import elastic
+import data
 
 class DeduplicateDirectories:
     __storage: Connection
@@ -88,9 +88,9 @@ class DeduplicateDirectories:
         for item in self.__duplicates_to_delete:
             os.remove(os.path.join(item['path'], item['name']))
             if not video:
-                self.__storage.delete_id(self.__storage.image_index, item['id'])
+                self.__storage.id(self.__storage.image_index, item['id'])
             else:
-                self.__storage.delete_id(self.__storage.video_index, item['id'])
+                self.__storage.id(self.__storage.video_index, item['id'])
 
     def get_all_paths(self, video: bool = False):
         return self.__storage.all_paths(video)
@@ -115,7 +115,7 @@ def deduplicate_videos_directory(dirname):
         for hash_val, array_of_ids in self.__duplicate_dict.items():
             if len(array_of_ids) > 1:
                 if not dry_run:
-                    self.delete_id_list(index, array_of_ids[1:])
+                    self.id_list(index, array_of_ids[1:])
                 count = count + len(array_of_ids) - 1
 
         return count
@@ -144,15 +144,19 @@ def deduplicate_videos_directory(dirname):
         return result
 
 
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Deduplicate images in the same directory')
-    parser.add_argument('--dirname', '-d', type=str, help='name of directory to catalog')
-    parser.add_argument('--videos', '-v', action='store_true', help='videos instead of images. Default: false')
-    parser.add_argument('--printonly', '-p', action='store_false', help='don\'t delete, just print. Default: true')
+    parser.add_argument('--dirname', '-d', type=str, help='name of directory to do deduplication in')
+    parser.add_argument('--delete', action='store_true', help='really delete, not just print. Default: false')
     parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
     parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
+    parser.add_argument('--index', type=str, help='the index in elastic. Defauls to ''catalog''')
     args = parser.parse_args()
+
+    connection = elastic.Connection(args.host, args.port)
+    if args.index is not None:
+        connection.index = args.index
+    store = elastic.Store(connection)
 
     deduplicate = DeduplicateDirectories(args.host, args.port)
 

@@ -1,6 +1,5 @@
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import connections
-from elastic.index import Index
 
 
 class Connection:
@@ -10,15 +9,16 @@ class Connection:
     __duplicate_dict: dict
     __host: str
     __port: int
-    __index: Index
+    __index: str
 
     # The connection is a static class variable, reused every time
     __connection = connections.Connections()
 
     def __init__(self, host: str = 'localhost', port: int = 9200):
         self.__duplicate_dict = {}
-        self.__host = host
-        self.__port = port
+        self.host = host
+        self.port = port
+        self.index = 'catalog'
 
     @property
     def host(self) -> str:
@@ -28,6 +28,14 @@ class Connection:
     def port(self) -> int:
         return self.__port
 
+    @property
+    def index(self) -> str:
+        return self.__index
+
+    @property
+    def connection_name(self) -> str:
+        return self.index + self.host + str(self.port)
+
     @host.setter
     def host(self, host: str):
         self.__host = host
@@ -36,17 +44,9 @@ class Connection:
     def port(self, port: int):
         self.__port = port
 
-    @property
-    def connection_name(self) -> str:
-        return 'elastic' + self.host + str(self.port)
-
-    @property
-    def index(self) -> Index:
-        return self.__index
-
     @index.setter
-    def index(self, i: index):
-        __index = i
+    def index(self, i: str):
+        self.__index = i
 
     def get(self) -> Elasticsearch:
         """The connection is reused. On first try there will be no 'elastic' connection. Create it.

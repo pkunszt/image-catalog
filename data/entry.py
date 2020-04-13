@@ -16,6 +16,7 @@ class Entry:
     _date: int
     _type: str
     _checksum: str
+    _id: str
 
     @property
     def name(self):
@@ -86,6 +87,14 @@ class Entry:
     @checksum.setter
     def checksum(self, checksum: str):
         self._checksum = checksum
+
+    @property
+    def id(self):
+        return self._id
+
+    @id.setter
+    def id(self, _id):
+        self._id = _id
 
     def to_dict(self):
         raise EntryException("to_dict called on base class Entry")
