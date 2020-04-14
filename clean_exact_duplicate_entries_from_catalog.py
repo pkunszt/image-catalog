@@ -4,11 +4,8 @@ import argparse
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="""Delete duplicates in the same directory. 
-    You need to provide the directory to find duplicates in. This will be based on the catalog entries
-    and not on what is actually on disk, make sure you add everything to the catalog and sync with it
-    before running this so that it will execute correctly. It is assumed that 
-    The file name with the name that makes most sense is kept. If one of the names""")
+    parser = argparse.ArgumentParser(description="""Delete duplicates in the catalog. 
+    Duplicates can only happen if the 'allowed duplicates' flag is set when adding items.""")
     parser.add_argument('--dirname', '-d', type=str, help='name of directory check for exact duplicates')
     parser.add_argument('--dryrun', action='store_true', help="don't delete, just print. Default: false")
     default_args.default_arguments(parser)
