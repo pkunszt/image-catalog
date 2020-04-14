@@ -22,18 +22,20 @@ In the first instance, there are the following functionalities foreseen
 * Python 3
 * A running elasticsearch instance on a host:port that is reachable. A working docker-compose.yml is in the docker directory.
 
+## Catalog Tools
+Several local executables are available to perform all cataloguing work.
+* Add files to catalog: `add_to_catalog`
+* Sync catalog with disk: `sync_catalog_with_disk`
 
 ### Catalog Files
 
 Using the add_to_catalog script, it is already possible to populate elastic with data.
+Catalog all image and video files in the given directory.
 
-Usage:
 ```
 usage: add_to_catalog.py [-h] [--recursive] [--allow_duplicates] [--host HOST]
-                         [--port PORT]
+                         [--port PORT] [--index INDEX]
                          dirname
-
-Catalog all image and video files in the given directory
 
 positional arguments:
   dirname               name of directory to catalog
@@ -45,6 +47,34 @@ optional arguments:
                         Duplicates are not ok by default.
   --host HOST           the host where elastic runs. Default: localhost
   --port PORT           the port where elastic runs. Default: 9200
-
+  --index INDEX         the index in elastic. Defauls to catalog
 ```
 
+### Sync Catalog with Disk
+This tool will sync the catalog with the disk contents. The disk is taken as
+truth, the catalog is changed based on what is on disk. New data on disk will
+NOT be loaded into the catalog, use add_to_catalog for this. Items in the
+catalog that are not on disk anymore are removed from the catalog. Items that
+changed on disk are updated in the catalog (change in size, modify time..)
+
+```
+usage: sync_catalog_with_disk.py [-h] [--host HOST] [--port PORT]
+                                 [--index INDEX] [--quiet]
+                                 [dirname]
+
+positional arguments:
+  dirname        name of directory to look at
+
+optional arguments:
+  -h, --help     show this help message and exit
+  --host HOST    the host where elastic runs. Default: localhost
+  --port PORT    the port where elastic runs. Default: 9200
+  --index INDEX  the index in elastic. Defauls to catalog
+  --quiet, -q    no verbose output
+```
+
+## Utilities
+These utilities are provided for testing and debugging purposes.
+
+* List all images or video in a given directory, in JSON format `images_in_directory`
+* List all file types found in a given directory `list_all_file_types`

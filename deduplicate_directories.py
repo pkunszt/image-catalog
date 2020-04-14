@@ -1,12 +1,12 @@
 import os
 import argparse
 import re
-
+import default_args
 import elastic
 import data
 
 class DeduplicateDirectories:
-    __storage: Connection
+    __connection: elastic.Connection
     __recursive: bool
     __image_id_list: list
     __video_id_list: list
@@ -22,25 +22,9 @@ class DeduplicateDirectories:
             port = 9200
         if index is not None:
             self.__index = index
-        self.__storage = Connection(host, port)
+        self.__connection = elastic.Connection(host, port)
         self.__count = 0
         self.__duplicates_to_delete = []
-
-    def find_duplicate_images(self, directory_name: str):
-        """Finding duplicate images per directory and returning a list of found duplicates.
-
-        Arguments:
-        directory_name -- name of the full path of the directory
-        """
-        self.__find_duplicates(directory_name)
-
-    def find_duplicate_videos(self, directory_name: str):
-        """Finding duplicate images per directory and returning a list of found duplicates.
-
-        Arguments:
-        directory_name -- name of the full path of the directory
-        """
-        self.__find_duplicates(directory_name, True)
 
     def __find_duplicates(self, directory_name, video: bool = False):
         self.__storage.clear_duplicate_list()
@@ -145,34 +129,18 @@ def deduplicate_videos_directory(dirname):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Deduplicate images in the same directory')
+    parser = argparse.ArgumentParser(description="""Delete duplicates in the same directory. 
+    You need to provide the directory to find duplicates in. This will be based on the catalog entries
+    and not on what is actually on disk, make sure you add everything to the catalog and sync with it
+    before running this so that it will execute correctly. It is assumed that 
+    The file name with the name that makes most sense is kept. If one of the names""")
     parser.add_argument('--dirname', '-d', type=str, help='name of directory to do deduplication in')
-    parser.add_argument('--delete', action='store_true', help='really delete, not just print. Default: false')
-    parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
-    parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
-    parser.add_argument('--index', type=str, help='the index in elastic. Defauls to ''catalog''')
+    parser.add_argument('--dry-run', action='store_true', help="don't delete, just print. Default: false")
+    default_args.default_arguments(parser)
     args = parser.parse_args()
 
     connection = elastic.Connection(args.host, args.port)
     if args.index is not None:
         connection.index = args.index
+
     store = elastic.Store(connection)
-
-    deduplicate = DeduplicateDirectories(args.host, args.port)
-
-    if args.dirname is not None:
-        if not args.videos:
-            deduplicate_images_directory(args.dirname)
-        else:
-            deduplicate_videos_directory(args.dirname)
-    else:
-        i = 0
-        for p in deduplicate.get_all_paths(args.videos):
-            print(p)
-            if not args.videos:
-                deduplicate_images_directory(p)
-            else:
-                deduplicate_videos_directory(p)
-            i = i + 1
-            if i > 10:
-                break

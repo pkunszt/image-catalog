@@ -2,6 +2,7 @@ import argparse
 import sys
 import elastic
 import data
+import default_args
 
 store: elastic.Store
 reader: elastic.Retrieve
@@ -32,21 +33,18 @@ def check(elastic_entry, quiet: bool = True):
 
 
 def main(arg):
-    """This tool will sync the catalog with the disk contents. The disk is taken as truth,
+    global updated, deleted, store, reader, deleter, total
+
+    parser = argparse.ArgumentParser(
+        description="""This tool will sync the catalog with the disk contents. The disk is taken as truth,
     the catalog is changed based on what is on disk.
 
     New data on disk will NOT be loaded into the catalog, use add_to_catalog for this.
     Items in the catalog that are not on disk anymore are removed from the catalog.
-    Items that changed on disk are updated in the catalog (change in size, modify time..)"""
-
-    global updated, deleted, store, reader, deleter, total
-
-    parser = argparse.ArgumentParser(description='Sync catalog with the data on disk')
+    Items that changed on disk are updated in the catalog (change in size, modify time..)""")
     parser.add_argument('dirname', nargs='?', type=str, help='name of directory to look at')
-    parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
-    parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
-    parser.add_argument('--index', type=str, help='the index in elastic. Defauls to ''catalog''')
     parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
+    default_args.default_arguments(parser)
     args = parser.parse_args(arg)
 
     connection = elastic.Connection(args.host, args.port)
