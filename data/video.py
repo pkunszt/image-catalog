@@ -1,3 +1,4 @@
+from __future__ import annotations
 from data.entry import Entry
 
 
@@ -13,6 +14,9 @@ class Video(Entry):
 
     def __init__(self):
         self.id = 0
+
+    def __repr__(self):
+        return str(self.to_dict())
 
     @property
     def kind(self):
@@ -36,3 +40,13 @@ class Video(Entry):
             hash=self.hash,
             checksum=self.checksum
         )
+
+    def diff(self, to: Video) -> dict:
+        result = dict()
+        me = self.to_dict()
+        other = to.to_dict()
+        for key in sorted(me.keys()):
+            if key in other.keys() and me[key] != other[key]:
+                result[key] = other[key]
+
+        return result

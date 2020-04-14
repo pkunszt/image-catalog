@@ -10,6 +10,9 @@ class EntryException(LookupError):
 
 class Entry:
 
+    def __repr__(self):
+        return "Entry"
+
     _name: str
     _path: str
     _size: int

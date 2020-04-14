@@ -1,7 +1,7 @@
 from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
-from directory.util import Util
 import os
+import hashlib
 
 
 class FactoryError(ValueError):
@@ -36,33 +36,53 @@ class Factory:
         return item
 
     @staticmethod
-    def from_directory_item(path: str, st: os.stat_result):
+    def from_path(path: str):
+        """Create an Image or Video object based on a path name to one.
+        Will throw exceptions if the item is neither or if it does not exist"""
         try:
-            return Factory.__image_from_directory_item(path, st)
+            return Factory.__image_from_directory_item(path)
         except InvalidImageError:
             pass
 
         try:
-            return Factory.__video_from_directory_item(path, st)
+            return Factory.__video_from_directory_item(path)
         except InvalidVideoError:
             pass
 
         raise FactoryError(f"Path {path} is neither image nor video")
 
     @staticmethod
-    def __image_from_directory_item(path: str, st: os.stat_result) -> Image:
+    def __image_from_directory_item(path: str) -> Image:
         image = Image()
-        image.full_path = path
-        image.date = st.st_mtime
-        image.size = st.st_size
-        image.checksum = Util.checksum(path)
+        Factory.__entry_from_directory_item(image, path)
         return image
 
     @staticmethod
-    def __video_from_directory_item(path: str, st: os.stat_result) -> Video:
+    def __video_from_directory_item(path: str) -> Video:
         video = Video()
-        video.full_path = path
-        video.date = st.st_mtime
-        video.size = st.st_size
-        video.checksum = Util.checksum(path)
+        Factory.__entry_from_directory_item(video, path)
         return video
+
+    @staticmethod
+    def __entry_from_directory_item(e, path: str):
+        e.full_path = path
+        st = os.stat(path)
+        e.date = st.st_mtime
+        e.size = st.st_size
+        e.checksum = Factory.checksum(path)
+
+    @staticmethod
+    def checksum(filename: str) -> str:
+        """Return the hex representation of the checksum on the full binary using blake2b. Needs full path."""
+        file_hash = hashlib.blake2b()
+        with open(filename, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                file_hash.update(chunk)
+        return file_hash.hexdigest()
+
+    @staticmethod
+    def diff(base, update) -> dict:
+        if type(base) is not type(update):
+            raise FactoryError(f"Diff on different types. One:{repr(base)} and Two:{repr(update)}")
+
+        return base.diff(update)

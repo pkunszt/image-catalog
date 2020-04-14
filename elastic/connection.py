@@ -14,10 +14,10 @@ class Connection:
     # The connection is a static class variable, reused every time
     __connection = connections.Connections()
 
-    def __init__(self, host: str = 'localhost', port: int = 9200):
+    def __init__(self, host: str = None, port: int = None):
         self.__duplicate_dict = {}
-        self.host = host
-        self.port = port
+        self.host = host if host else 'localhost'
+        self.port = port if port else 9200
         self.index = 'catalog'
 
     @property

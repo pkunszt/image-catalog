@@ -1,6 +1,5 @@
 import os
 from typing import List, Generator
-from directory.util import Util
 from data.factory import Factory, FactoryError
 from data.entry import Entry
 
@@ -25,19 +24,20 @@ class Reader:
         Argument:
         directory_name -- name of the full path of the directory to scan.
         """
-        Util.check_that_this_is_a_directory(directory_name)
+        if not os.path.isdir(directory_name):
+            raise NotADirectoryError(directory_name + " is not a directory!")
         self.__file_list.clear()
 
         # scan the directory: fetch all data for files
         with os.scandir(directory_name) as iterator:
             for item in iterator:
                 if not item.name.startswith('.') and item.is_file():
-                    self.__add_entry(item.path, item.stat())
+                    self.__add_entry(item.path)
 
-    def __add_entry(self, path: str, st: os.stat_result) -> None:
+    def __add_entry(self, path: str) -> None:
         """Adding an entry, specificity based on whether it is an image or a video. Args stat and path."""
         try:
-            item = Factory.from_directory_item(path, st)
+            item = Factory.from_path(path)
             self.__file_list.append(item)
             self.__valid_types_found.add(item.type)
         except FactoryError:

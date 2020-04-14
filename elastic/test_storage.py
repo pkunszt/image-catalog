@@ -9,7 +9,7 @@ from directory.read import Reader
 
 
 class TestStorage(TestCase):
-    sorted_list: List
+    file_list: List
     testIndex = 'test_unit_elastic_storage'
     testDirectory = '../testfiles'
     connection: Connection
@@ -18,7 +18,7 @@ class TestStorage(TestCase):
         time.sleep(1)
         test_directory = Reader()
         test_directory.read(self.testDirectory)
-        self.sorted_list = test_directory.file_list
+        self.file_list = test_directory.file_list
 
         self.connection = Connection()
         self.connection.index = self.testIndex
@@ -33,14 +33,14 @@ class TestStorage(TestCase):
 
     def test_store_list(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         # When trying again, none will be stored - they are already there
         time.sleep(1)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), 0)
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), 0)
 
     def test_delete_by_id_list(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         reader = Retrieve(self.connection)
         id_list = [ide for ide in reader.all_ids()]
@@ -54,8 +54,8 @@ class TestStorage(TestCase):
 
     def test_clear_exact_duplicates(self):
         elastic_storage = Store(self.connection, allow_duplicates=True)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
 
         time.sleep(1)
         count = elastic_storage.clear_exact_duplicates_from_index(dry_run=False)
@@ -63,7 +63,7 @@ class TestStorage(TestCase):
 
     def test_build_duplicate_list_from_checksum(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         elastic_storage.build_duplicate_list_from_checksum(directory_filter=self.testDirectory)
         names = []
@@ -78,7 +78,7 @@ class TestStorage(TestCase):
 
     def test_all_paths(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         reader = Retrieve(self.connection)
         for path in reader.all_paths():
@@ -86,15 +86,15 @@ class TestStorage(TestCase):
 
     def test_scan_index(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         reader = Retrieve(self.connection)
         l = [entry for entry in reader.all_ids()]
-        self.assertEqual(len(l), len(self.sorted_list))
+        self.assertEqual(len(l), len(self.file_list))
 
     def test_update(self):
         elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.sorted_list), len(self.sorted_list))
+        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         new_entries = {}
         i = 0

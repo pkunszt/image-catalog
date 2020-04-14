@@ -1,123 +1,73 @@
-import os
 import argparse
+import sys
 import elastic
-import directory
+import data
+
+store: elastic.Store
+reader: elastic.Retrieve
+deleter: elastic.Delete
+updated: int = 0
+deleted: int = 0
+total: int = 0
 
 
-class SyncCatalogWithDisk:
-    __catalog: Connection
-    __count: int
-
-    def __init__(self, host: str = 'localhost', port: int = 9200):
-        if not host:
-            host = 'localhost'
-        if not port:
-            port = 9200
-        self.__catalog = Connection(host, port)
-        self.__count = 0
-
-    def sync(self, video: bool = False, directory: str = None, verbose: bool = True):
-        self.__count = 0
-        for entry in self.__catalog.scan_index(video=video, directory_filter=directory):
-            full_path = os.path.join(entry.path, entry.name)
-            try:
-                st = os.stat(full_path)
-            except FileNotFoundError:
-                if verbose:
-                    print("{0} In catalog but not on disk".format(full_path))
-                index = self.__catalog.get_index(video)
-                self.__catalog.id(index, entry.meta.id)
-                self.__count = self.__count + 1
-                continue
-
-            # Now detect if there is a difference
-            change = {}
-            new_entry = self.entry_to_dict(entry)
-            if st.st_size != entry.size:
-                if verbose:
-                    print("{0} size mismatch: catalog has {1} disk has {2}".format(full_path, entry.size, st.st_size))
-                new_entry['size'] = st.st_size
-                change['size'] = st.st_size
-            if st.st_mtime != entry.created:
-                if verbose:
-                    print("{0} date mismatch: catalog has {1} disk has {2}".format(full_path, entry.created, 
-                                                                                   st.st_mtime))
-                new_entry['created'] = st.st_mtime
-                change['created'] = st.st_mtime
-            new_type: str = Util.get_file_type(full_path)
-            if new_type != entry.type:
-                if verbose:
-                    print("{0} type mismatch: catalog has {1} disk has {2}".format(full_path, entry.type, new_type))
-                new_entry['type'] = new_type
-                change['type'] = new_type
-            new_hash = ImagesInDirectory.get_hash_from_entry(new_entry)
-            if new_hash != entry.hash:
-                if verbose:
-                    print("{0} hash mismatch: catalog has {1} disk has {2}".format(full_path, entry.hash, new_hash))
-                change['hash'] = new_hash
-
-            if len(change) > 0:
-                self.__catalog.update(change, video=video, _id=entry.meta.id)
-                self.__count = self.__count + 1
-
-        return self.__count
-
-    @staticmethod
-    def entry_to_dict(entry):
-        new_entry = {'name': entry.name,
-                     'path': entry.path,
-                     'size': entry.size,
-                     'created': entry.created,
-                     'checksum': entry.checksum,
-                     'hash': entry.hash,
-                     'type': entry.type,
-                     'kind': entry.kind}
-        return new_entry
-
-
-def check(entry):
-    full_path = os.path.join(entry.path, entry.name)
-
-    # first, check if catalog entry actually exists on disk.
-    # remove from catalog if not
+def check(elastic_entry, quiet: bool = True):
+    global deleted, updated
     try:
-        st = os.stat(full_path)
+        disk_entry = data.Factory.from_path(elastic_entry.full_path)
     except FileNotFoundError:
-        if not args.quiet:
-            print("{0} In catalog but not on disk".format(full_path))
-        deleter.id(index.from_kind(entry.kind), entry.meta.id)
-        global deleted
-        deleted = deleted + 1
+        if not quiet:
+            print(f"{elastic_entry.full_path} In catalog but not on disk")
+        deleter.id(elastic_entry.id)
+        deleted += 1
         return
 
-    change = dict()
-    detect_change_in_size(entry, st.st_size)
+    change = elastic_entry.diff(disk_entry)
+    if change:
+        store.update(change, elastic_entry.id)
+        updated += 1
+        if not quiet:
+            print(f"Updating {elastic_entry.full_path}")
+            print(change)
 
 
-if __name__ == '__main__':
+def main(arg):
+    """This tool will sync the catalog with the disk contents. The disk is taken as truth,
+    the catalog is changed based on what is on disk.
+
+    New data on disk will NOT be loaded into the catalog, use add_to_catalog for this.
+    Items in the catalog that are not on disk anymore are removed from the catalog.
+    Items that changed on disk are updated in the catalog (change in size, modify time..)"""
+
+    global updated, deleted, store, reader, deleter, total
+
     parser = argparse.ArgumentParser(description='Sync catalog with the data on disk')
     parser.add_argument('dirname', nargs='?', type=str, help='name of directory to look at')
-    parser.add_argument('--video', '-v', action='store_true', help='use the video catalog')
-    parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
     parser.add_argument('--host', type=str, help='the host where elastic runs. Default: localhost')
     parser.add_argument('--port', type=int, help='the port where elastic runs. Default: 9200')
-    args = parser.parse_args()
+    parser.add_argument('--index', type=str, help='the index in elastic. Defauls to ''catalog''')
+    parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
+    args = parser.parse_args(arg)
 
-    index = elastic.Index()
     connection = elastic.Connection(args.host, args.port)
-    store = elastic.Store(connection.get(), index=index)
+    if args.index is not None:
+        connection.index = args.index
+
+    if not args.quiet:
+        print(f"Checking catalog on {connection.host}:{connection.port} with index {connection.index}")
+
+    store = elastic.Store(connection)
     reader = elastic.Retrieve(connection)
     deleter = elastic.Delete(connection)
 
-    index_to_look_at = index.image
-    if args.video:
-        index_to_look_at = index.video
+    updated = deleted = total = 0
+    for entry in reader.all_entries(args.dirname):
+        check(data.Factory.from_elastic_entry(entry), args.quiet)
+        total += 1
 
-    updated = 0
-    deleted = 0
-    for entry in reader.all_entries(index_to_look_at, args.dirname):
-        check(entry)
+    return updated, deleted, total
 
-    sync_catalog = SyncCatalogWithDisk(args.host, args.port)
-    print("updated: {0} entries ".format(sync_catalog.sync(video=args.video, directory=args.dirname,
-                                                           verbose=not args.quiet)))
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
+    print(f"updated: {updated} entries, deleted {deleted} entries from a total of {total} entries")
