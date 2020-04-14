@@ -27,8 +27,7 @@ class TestStorage(TestCase):
         reader = Retrieve(self.connection)
         deleter = Delete(self.connection)
 
-        for _id in reader.all_ids():
-            deleter.id(_id)
+        deleter.id_list([i for i in reader.all_ids()])
         time.sleep(1)
 
     def test_store_list(self):
@@ -51,30 +50,6 @@ class TestStorage(TestCase):
             deleter = Delete(self.connection)
             count = deleter.id_list(id_list)
         self.assertEqual(count, should)
-
-    def test_clear_exact_duplicates(self):
-        elastic_storage = Store(self.connection, allow_duplicates=True)
-        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
-        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
-
-        time.sleep(1)
-        count = elastic_storage.clear_exact_duplicates_from_index(dry_run=False)
-        self.assertEqual(count, 5)
-
-    def test_build_duplicate_list_from_checksum(self):
-        elastic_storage = Store(self.connection)
-        self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
-        time.sleep(1)
-        elastic_storage.build_duplicate_list_from_checksum(directory_filter=self.testDirectory)
-        names = []
-        for image_ids in elastic_storage.get_found_duplicate_ids():
-            for image_id in image_ids:
-                image = elastic_storage.get_id(image_id)
-                names.append(image['name'])
-                self.assertEqual(image['path'], self.testDirectory)
-        self.assertTrue('spidey.jpeg' in names)
-        self.assertTrue('spiderman.jpg' in names)
-        pass
 
     def test_all_paths(self):
         elastic_storage = Store(self.connection)
