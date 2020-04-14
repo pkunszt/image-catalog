@@ -1,146 +1,70 @@
 import os
+import sys
 import argparse
 import re
 import default_args
 import elastic
-import data
 
-class DeduplicateDirectories:
-    __connection: elastic.Connection
-    __recursive: bool
-    __image_id_list: list
-    __video_id_list: list
-    __index: str
-    __duplicates_to_delete: list
-    __paths: list
-    __date_pattern = re.compile(r'\d{4}-\d\d-\d\d \d\d-\d\d-\d\d\.\w+')         # regex for date format
-
-    def __init__(self, host: str = 'localhost', port: int = 9200, index: str = None):
-        if not host:
-            host = 'localhost'
-        if not port:
-            port = 9200
-        if index is not None:
-            self.__index = index
-        self.__connection = elastic.Connection(host, port)
-        self.__count = 0
-        self.__duplicates_to_delete = []
-
-    def __find_duplicates(self, directory_name, video: bool = False):
-        self.__storage.clear_duplicate_list()
-        self.__duplicates_to_delete.clear()
-        self.__storage.build_duplicate_list_from_checksum(directory_filter=directory_name, video=video)
-        for image_id_list in self.__storage.get_found_duplicate_ids():
-            image_list = []
-            for image_id in image_id_list:
-                if not video:
-                    item = self.__storage.get_image_by_id(image_id)
-                else:
-                    item = self.__storage.get_video_by_id(image_id)
-                item['id'] = image_id
-                image_list.append(item)
-                print(item['name'], end=" ; ")
-
-            # select the name to keep, add rest to deletion list
-            to_keep = self.select_name_to_keep(image_list)
-            for to_delete in image_list:
-                if to_delete['id'] != to_keep['id']:
-                    self.__duplicates_to_delete.append(to_delete)
-            print("Keeping: {0}".format(os.path.join(to_keep['path'], to_keep['name'])))
-
-    def select_name_to_keep(self, image_list) -> dict:
-        for im in image_list:
-            if self.check_date_name(im['name']):
-                return im
-        return sorted(image_list, key=lambda entry: entry['name'])[0]
-
-    def check_date_name(self, name) -> bool:
-        if self.__date_pattern.match(name):
-            return True
-        return False
-
-    def get_image_id_list(self) -> list:
-        return self.__image_id_list
-
-    def get_video_id_list(self) -> list:
-        return self.__video_id_list
-
-    def get_image_by_id(self, image_id: str):
-        return self.__storage.get_image_by_id(image_id)
-
-    def delete_duplicates(self, video: bool = False):
-        for item in self.__duplicates_to_delete:
-            os.remove(os.path.join(item['path'], item['name']))
-            if not video:
-                self.__storage.id(self.__storage.image_index, item['id'])
-            else:
-                self.__storage.id(self.__storage.video_index, item['id'])
-
-    def get_all_paths(self, video: bool = False):
-        return self.__storage.all_paths(video)
+retrieve: elastic.Retrieve
+date_pattern = re.compile(r'\d{4}-\d\d-\d\d \d\d-\d\d-\d\d\.\w+')  # regex for date format
 
 
-def deduplicate_images_directory(dirname):
-    deduplicate.find_duplicate_images(dirname)
-    if not args.printonly:
-        deduplicate.delete_duplicates()
+def get_duplicates_in_dir(dirname: str = None):
+    global retrieve
+    entry_list = dict()
+    for entry in retrieve.all_entries(dirname):
+        entry_list.setdefault(entry.checksum+entry.path, [])\
+            .append({'id': entry.meta.id, 'path': entry.path, 'name': entry.name})
+
+    for h, item in entry_list.items():
+        if len(item) > 1:
+            yield item
 
 
-def deduplicate_videos_directory(dirname):
-    deduplicate.find_duplicate_videos(dirname)
-    if not args.printonly:
-        deduplicate.delete_duplicates(video=True)
+def select_name_to_keep(image_list) -> dict:
+    for im in image_list:
+        if date_pattern.match(im['name']):
+            return im
+    return sorted(image_list, key=lambda entry: entry['name'])[0]
 
 
-    def clear_exact_duplicates_from_index(self, video: bool = False, dry_run: bool = True) -> int:
-        count = 0
-        index = self.get_index(video)
-        self.build_duplicate_list_from_full_content(video)
-        for hash_val, array_of_ids in self.__duplicate_dict.items():
-            if len(array_of_ids) > 1:
-                if not dry_run:
-                    self.id_list(index, array_of_ids[1:])
-                count = count + len(array_of_ids) - 1
+def main(arg):
+    global retrieve
 
-        return count
-
-
-    def build_duplicate_list_from_full_content(self, video: bool = False) -> None:
-        for entry in self.scan_index(video=video):
-            self.__duplicate_dict.setdefault(entry.hash, []).append(entry.meta.id)
-
-    def build_duplicate_list_from_checksum(self, directory_filter: str = None,
-                                           video: bool = False) -> None:
-        for entry in self.scan_index(video=video, directory_filter=directory_filter):
-            self.__duplicate_dict.setdefault(entry.checksum+entry.path, []).append(entry.meta.id)
-
-    def clear_duplicate_list(self):
-        if self.__duplicate_dict is None:
-            self.__duplicate_dict = dict()
-        self.__duplicate_dict.clear()
-
-    def get_found_duplicate_ids(self) -> list:
-        result = []
-        for hash_val, array_of_ids in self.__duplicate_dict.items():
-            if len(array_of_ids) > 1:
-                result.append(array_of_ids)  # get last element of list
-
-        return result
-
-
-if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Delete duplicates in the same directory. 
     You need to provide the directory to find duplicates in. This will be based on the catalog entries
     and not on what is actually on disk, make sure you add everything to the catalog and sync with it
     before running this so that it will execute correctly. It is assumed that 
     The file name with the name that makes most sense is kept. If one of the names""")
-    parser.add_argument('--dirname', '-d', type=str, help='name of directory to do deduplication in')
-    parser.add_argument('--dry-run', action='store_true', help="don't delete, just print. Default: false")
+    parser.add_argument('dirname', nargs='?', type=str, help='name of directory to do deduplication in')
+    parser.add_argument('--dryrun', action='store_true', help="don't delete, just print. Default: false")
     default_args.default_arguments(parser)
-    args = parser.parse_args()
+    args = parser.parse_args(arg)
 
     connection = elastic.Connection(args.host, args.port)
     if args.index is not None:
         connection.index = args.index
 
-    store = elastic.Store(connection)
+    retrieve = elastic.Retrieve(connection)
+    delete = elastic.Delete(connection)
+
+    if args.dirname:
+        dir_list = (args.dirname, )
+    else:
+        dir_list = retrieve.all_paths()
+
+    for d in dir_list:
+        print(f"Scanning {d}")
+        for duplicate_list in get_duplicates_in_dir(d):
+            keep = select_name_to_keep(duplicate_list)
+            print(f"Keeping {keep['name']}")
+            for to_delete in duplicate_list:
+                if to_delete['id'] != keep['id']:
+                    print(f" .... Deleting {to_delete['name']}")
+                    if not args.dryrun:
+                        os.remove(os.path.join(to_delete['path'], to_delete['name']))
+                        delete.id(to_delete['id'])
+
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
