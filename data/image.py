@@ -34,7 +34,7 @@ class Image(Entry):
             name=self.name,
             path=self.path,
             size=self.size,
-            modified=self.date,
+            modified=self.modified,
             type=self.type,
             kind=self.kind,
             hash=self.hash,

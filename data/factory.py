@@ -28,7 +28,7 @@ class Factory:
         item.path = e.path
         item.size = e.size
         item.checksum = e.checksum
-        item.date = e.created
+        item.modified = e.modified
         if item.hash != e.hash:
             raise FactoryError(f"Hash mismatch for {e.name}")
         item.id = e.meta.id
@@ -67,7 +67,7 @@ class Factory:
     def __entry_from_directory_item(e, path: str):
         e.full_path = path
         st = os.stat(path)
-        e.date = st.st_mtime
+        e.modified = st.st_mtime
         e.size = st.st_size
         e.checksum = Factory.checksum(path)
 

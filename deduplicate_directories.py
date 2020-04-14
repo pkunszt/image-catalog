@@ -9,7 +9,7 @@ retrieve: elastic.Retrieve
 date_pattern = re.compile(r'\d{4}-\d\d-\d\d \d\d-\d\d-\d\d\.\w+')  # regex for date format
 
 
-def get_duplicates_in_dir(dirname: str = None):
+def get_duplicates_in_dir(dirname: str):
     global retrieve
     entry_list = dict()
     for entry in retrieve.all_entries(dirname):

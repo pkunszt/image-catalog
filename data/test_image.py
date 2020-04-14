@@ -29,7 +29,7 @@ class TestImage(TestCase):
     def test_diff(self):
         image = Image()
         image.full_path = "/this/is/my/image.png"
-        image.date = 1000000
+        image.modified = 1000000
         image.size = 10
         image.checksum = "ABCDEFGH"
 
@@ -37,11 +37,11 @@ class TestImage(TestCase):
 
         image2 = Image()
         image2.full_path = image.full_path
-        image2.date = 2000000
+        image2.modified = 2000000
         image2.size = image.size
         image2.checksum = image.checksum
 
-        self.assertEqual(image.diff(image2), {"created": image2.date})
+        self.assertEqual(image.diff(image2), {"modified": image2.modified})
 
     def test_same_file(self):
         image1 = Factory.from_path("../testfiles/spiderman.jpg")

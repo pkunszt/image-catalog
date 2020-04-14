@@ -1,46 +1,45 @@
 import unittest
+import os
+import shutil
+import time
+import deduplicate_directories
+from directory import Reader
+from elastic import Store, Connection, Retrieve
 
 
 class TestDeduplicateDirectories(unittest.TestCase):
-    testIndex = 'test_unit_deduplicate_directories'
 
-    def test_find_duplicates(self):
-        from deduplicate_directories import DeduplicateDirectories
-        deduplicate = DeduplicateDirectories()
+    def test_deduplicate(self):
+        test_dir = "./testfiles"
+        test_name = "spidey.jpeg"
+        test_source = "spiderman.jpg"
+        test_path = os.path.join(test_dir, test_name)
+        test_source_path = os.path.join(test_dir, test_source)
+        test_index = 'test_dedupdir'
 
-        self.fail()
+        if not os.path.exists(test_path):
+            shutil.copy2(test_source_path, test_path)
 
-    def test_check_date_name(self):
-        from deduplicate_directories import DeduplicateDirectories
-        deduplicate = DeduplicateDirectories()
-        self.assertTrue(deduplicate.check_date_name('2008-08-16 13-45-01.jpg'))
-        self.assertFalse(deduplicate.check_date_name('2008-08-16 13-45-01 (1).jpg'))
-        self.assertFalse(deduplicate.check_date_name('P3237432.jpg'))
-        self.assertFalse(deduplicate.check_date_name('2008-08-16 13-45-01 2343.jpg'))
+        test_directory = Reader()
+        test_directory.read(test_dir)
+        file_list = test_directory.file_list
+        connection = Connection()
+        connection.index = test_index
+        catalog_store = Store(connection)
+        catalog_store.list(item for item in file_list)
+        time.sleep(1)
 
-    def test_select_name_no_date(self):
-        from deduplicate_directories import DeduplicateDirectories
-        deduplicate = DeduplicateDirectories()
-        item1 = {'id': '1234', 'name': 'Aaaa'}
-        item2 = {'id': '132', 'name': 'Bbbb'}
-        item3 = {'id': '2345', 'name': 'Cccc'}
-        item4 = {'id': '333', 'name': 'Dddd'}
-        item5 = {'id': '666', 'name': 'Eeee'}
-        example_list = [item3, item1, item2, item4, item5]
+        deduplicate_directories.main(['--index', test_index])
+        self.assertFalse(os.path.exists(test_path))
 
-        self.assertEqual(deduplicate.select_name_to_keep(example_list), item1)
-
-    def test_select_name_with_date(self):
-        from deduplicate_directories import DeduplicateDirectories
-        deduplicate = DeduplicateDirectories()
-        item1 = {'id': '1234', 'name': 'Aaaa'}
-        item2 = {'id': '132', 'name': 'Bbbb'}
-        item3 = {'id': '2345', 'name': '2008-08-16 13-45-01.jpg'}
-        item4 = {'id': '333', 'name': 'Dddd'}
-        item5 = {'id': '666', 'name': '2008-08-16 13-45-01 (1).jpg'}
-        example_list = [item5, item1, item2, item3, item4]
-
-        self.assertEqual(deduplicate.select_name_to_keep(example_list), item3)
+        time.sleep(1)
+        retrieve = Retrieve(connection)
+        entry_list = [
+            entry.name
+            for entry in retrieve.all_entries()
+        ]
+        self.assertNotIn(test_name, entry_list)
+        shutil.copy2(test_source_path, test_path)
 
 
 if __name__ == '__main__':

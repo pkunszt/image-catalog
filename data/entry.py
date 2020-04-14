@@ -16,7 +16,7 @@ class Entry:
     _name: str
     _path: str
     _size: int
-    _date: int
+    _modified: int
     _type: str
     _checksum: str
     _id: str
@@ -38,8 +38,8 @@ class Entry:
         return self._size
 
     @property
-    def date(self):
-        return self._date
+    def modified(self):
+        return self._modified
 
     @property
     def type(self):
@@ -50,12 +50,12 @@ class Entry:
         return self._checksum
 
     @property
-    def date_str(self):
-        return datetime.date.fromtimestamp(self.date).isoformat()
+    def modified_str(self):
+        return datetime.date.fromtimestamp(self.modified).isoformat()
 
     @property
-    def datetime_str(self):
-        return datetime.datetime.fromtimestamp(self.date).strftime("%Y-%m-%d %H-%M-%S")
+    def modified_time_str(self):
+        return datetime.datetime.fromtimestamp(self.modified).strftime("%Y-%m-%d %H-%M-%S")
 
     @property
     def hash(self):
@@ -83,9 +83,9 @@ class Entry:
     def size(self, size: int):
         self._size = size
 
-    @date.setter
-    def date(self, date: int):
-        self._date = int(date)
+    @modified.setter
+    def modified(self, modified: int):
+        self._modified = int(modified)
 
     @checksum.setter
     def checksum(self, checksum: str):

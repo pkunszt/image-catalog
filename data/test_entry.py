@@ -37,5 +37,5 @@ class TestEntry(TestCase):
 
     def test_set_date(self):
         entry = Entry()
-        entry.date = 0
-        self.assertEqual(entry.date_str, "1970-01-01")
+        entry.modified = 0
+        self.assertEqual(entry.modified_str, "1970-01-01")
