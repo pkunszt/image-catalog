@@ -48,7 +48,8 @@ class Store:
                     result = s.execute()
                     hits = len(result.hits)
                 except NotFoundError:
-                    pass
+                    print(f"The index {self.index} does not exist yet, creating it")
+                    self.create_index()
             if self.allow_duplicates or hits == 0:
                 self.elastic.index(index=self.index, body=e.to_dict())
                 count = count + 1
@@ -56,3 +57,22 @@ class Store:
 
     def update(self, change, _id: str):
         self.elastic.update(index=self.index, id=_id, body={'doc': change})
+
+    def create_index(self):
+        self.elastic.create(index=self.index, body={
+            "mappings": {
+                "properties": {
+                    "name": {"type": "text"},
+                    "path": {"type": "text"},
+                    "size": {"type": "integer"},
+                    "duration": {"type": "integer"},
+                    "captured": {"type": "date"},
+                    "modified": {"type": "date"},
+                    "kind": {"type": "keyword"},
+                    "type": {"type": "keyword"},
+                    "hash": {"type": "keyword"},
+                    "checksum": {"type": "keyword"},
+                    "location": {"type": "geo_point"}
+                }
+            }
+        })

@@ -32,10 +32,14 @@ def main(arg):
     global retrieve
 
     parser = argparse.ArgumentParser(description="""Delete duplicates in the same directory. 
-    You need to provide the directory to find duplicates in. This will be based on the catalog entries
-    and not on what is actually on disk, make sure you add everything to the catalog and sync with it
+    You can provide the directory to find duplicates in. If no directory is provided, all directories in the
+    catalog will be scanned. This is all based on the catalog entries
+    and not on what is actually on disk. Make sure you add everything to the catalog and sync with it
     before running this so that it will execute correctly. It is assumed that 
-    The file name with the name that makes most sense is kept. If one of the names""")
+    The file name with the name that makes most sense is kept. 
+    
+    Makes sense here means: If the name is according to our usual date-time pattern, then we keep that.
+    Otherwise we choose the first by alphabetic order.""")
     parser.add_argument('dirname', nargs='?', type=str, help='name of directory to do deduplication in')
     parser.add_argument('--dryrun', action='store_true', help="don't delete, just print. Default: false")
     default_args.default_arguments(parser)

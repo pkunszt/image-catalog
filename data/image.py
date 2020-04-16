@@ -14,6 +14,8 @@ class Image(Entry):
 
     def __init__(self):
         self.id = 0
+        self._captured = -1
+        self._location = ""
 
     def __repr__(self):
         return str(self.to_dict())
@@ -29,8 +31,16 @@ class Image(Entry):
         if self.type not in self.__image_types:
             raise InvalidImageError(f"Not an image with extension {self.type}")
 
+    @property
+    def location(self):
+        return self._location
+
+    @location.setter
+    def location(self, loc: str):
+        self._location = loc
+
     def to_dict(self):
-        return dict(
+        d = dict(
             name=self.name,
             path=self.path,
             size=self.size,
@@ -40,6 +50,11 @@ class Image(Entry):
             hash=self.hash,
             checksum=self.checksum
         )
+        if self.captured > 0:
+            d.update(captured=self.captured)
+        if self.location:
+            d.update(location=self.location)
+        return d
 
     def diff(self, to: Image) -> dict:
         result = dict()

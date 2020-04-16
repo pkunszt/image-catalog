@@ -2,6 +2,10 @@ from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
 import os
 import hashlib
+import exifread
+import subprocess
+import re
+from datetime import datetime
 
 
 class FactoryError(ValueError):
@@ -10,6 +14,16 @@ class FactoryError(ValueError):
 
 
 class Factory:
+    _exif_date_time_original: str = "EXIF DateTimeOriginal"
+    _exif_date_time_format: str = "%Y:%m:%d %H:%M:%S"
+    _video_duration_format: str = "%Y-%m-%d %H:%M:%S"
+    _GPS: dict = dict(latR="GPS GPSLatitudeRef",
+                      lat="GPS GPSLatitude",
+                      lonR="GPS GPSLongitudeRef",
+                      lon="GPS GPSLongitude"
+                      )
+    _duration = re.compile('.*(?P<hour>\d\d):(?P<min>\d\d):(?P<sec>\d\d)\.(?P<msec>\d+).*')
+
     def __init__(self):
         pass
 
@@ -55,13 +69,52 @@ class Factory:
     def __image_from_directory_item(path: str) -> Image:
         image = Image()
         Factory.__entry_from_directory_item(image, path)
+        Factory.__add_captured_time_and_location(image, path)
         return image
+
+    @staticmethod
+    def __add_captured_time_and_location(image: Image, path: str):
+        with open(path, 'rb') as file:
+            tags = exifread.process_file(file)
+            if Factory._exif_date_time_original in tags.keys():
+                dt = datetime.strptime(str(tags[Factory._exif_date_time_original]), Factory._exif_date_time_format)
+                image.captured = dt.timestamp()
+            if Factory._GPS['lat'] in tags.keys() and Factory._GPS['lon'] in tags.keys():
+                lat = Factory.__get_coord_from_gps(tags[Factory._GPS['lat']].values, tags[Factory._GPS['latR']].values)
+                lon = Factory.__get_coord_from_gps(tags[Factory._GPS['lon']].values, tags[Factory._GPS['lonR']].values)
+                image.location = f"{lat},{lon}"
+
+    @staticmethod
+    def __get_coord_from_gps(dms, ref):
+        factor = 1
+        if ref in ['S', 'W']:
+            factor = -1
+
+        coord = dms[0].num / dms[0].den
+        coord += dms[1].num / dms[1].den / 60.0
+        coord += dms[2].num / dms[2].den / 3600.0
+
+        return factor * round(coord, 5)
 
     @staticmethod
     def __video_from_directory_item(path: str) -> Video:
         video = Video()
         Factory.__entry_from_directory_item(video, path)
+        Factory.__add_video_length_and_captured_time(video)
         return video
+
+    @staticmethod
+    def __add_video_length_and_captured_time(video: Video):
+        output = subprocess.run(['docker', 'run', '--rm',
+                                 '-v', f"{video.path}:/files", 'sjourdan/ffprobe',
+                                f"/files/{video.name}"], capture_output=True)
+        lines = output.stderr.decode("utf-8").splitlines()
+        for line in lines:
+            if line.find("Duration") > 0:
+                d = Factory._duration.match(line)
+                video.duration = int(d.group('hour'))*3600 + int(d.group('min')*60) + int(d.group('sec'))
+            if line.find("creation_time") > 0:
+                video.captured = datetime.strptime(line[line.find(':')+2:], Factory._video_duration_format).timestamp()
 
     @staticmethod
     def __entry_from_directory_item(e, path: str):

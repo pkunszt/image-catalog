@@ -20,6 +20,9 @@ class Entry:
     _type: str
     _checksum: str
     _id: str
+    _captured: int
+
+    date_time_format: str = "%Y-%m-%d %H-%M-%S"
 
     @property
     def name(self):
@@ -50,12 +53,22 @@ class Entry:
         return self._checksum
 
     @property
+    def captured(self):
+        return self._captured
+
+    @property
+    def captured_str(self):
+        return datetime.datetime.fromtimestamp(self.captured, tz=datetime.timezone(datetime.timedelta(hours=1)))\
+            .strftime(Entry.date_time_format)
+
+    @property
     def modified_str(self):
         return datetime.date.fromtimestamp(self.modified).isoformat()
 
     @property
     def modified_time_str(self):
-        return datetime.datetime.fromtimestamp(self.modified).strftime("%Y-%m-%d %H-%M-%S")
+        return datetime.datetime.fromtimestamp(self.modified, tz=datetime.timezone(datetime.timedelta(hours=1)))\
+            .strftime(Entry.date_time_format)
 
     @property
     def hash(self):
@@ -86,6 +99,10 @@ class Entry:
     @modified.setter
     def modified(self, modified: int):
         self._modified = int(modified)
+
+    @captured.setter
+    def captured(self, c):
+        self._captured = int(c)
 
     @checksum.setter
     def checksum(self, checksum: str):

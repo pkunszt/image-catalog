@@ -14,6 +14,8 @@ class Video(Entry):
 
     def __init__(self):
         self.id = 0
+        self._captured = -1
+        self._duration = -1
 
     def __repr__(self):
         return str(self.to_dict())
@@ -29,8 +31,16 @@ class Video(Entry):
         if self.type not in self.__video_types:
             raise InvalidVideoError(f"Not video with extension {self.type}")
 
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, c):
+        self._duration = int(c)
+
     def to_dict(self):
-        return dict(
+        d = dict(
             name=self.name,
             path=self.path,
             size=self.size,
@@ -40,6 +50,11 @@ class Video(Entry):
             hash=self.hash,
             checksum=self.checksum
         )
+        if self.captured > 0:
+            d.update(captured=self.captured)
+        if self.duration > 0:
+            d.update(duration=self.duration)
+        return d
 
     def diff(self, to: Video) -> dict:
         result = dict()
