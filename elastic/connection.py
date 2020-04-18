@@ -1,5 +1,6 @@
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import connections
+from constants import Constants
 
 
 class Connection:
@@ -30,11 +31,13 @@ class Connection:
 
     @property
     def index(self) -> str:
+        if not self.get().indices.exists(self.__index):
+            self.create_index(self.__index)
         return self.__index
 
     @property
     def connection_name(self) -> str:
-        return self.index + self.host + str(self.port)
+        return self.__index + self.host + str(self.port)
 
     @host.setter
     def host(self, host: str):
@@ -55,7 +58,7 @@ class Connection:
         try:
             self.__elastic = type(self).__connection.get_connection(self.connection_name)
         except KeyError:
-            type(self).__connection.configure(**{self.connection_name: {'hosts': [self.__host + ':' + str(self.__port)]}})
+            type(self).__connection.configure(**{self.connection_name: {'hosts': [self.__host+':'+str(self.__port)]}})
             return self.get()
 
         return self.__elastic
@@ -67,4 +70,7 @@ class Connection:
         except KeyError:
             return
         type(self).__connection.remove_connection(self.connection_name)
-        print("closed connection to "+self.host+':'+str(self.port))
+        print("closed connection to " + self.host + ':' + str(self.port))
+
+    def create_index(self, index):
+        self.__elastic.indices.create(index=index, body=Constants.index)

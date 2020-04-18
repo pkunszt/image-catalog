@@ -13,14 +13,19 @@ class Entry:
     def __repr__(self):
         return "Entry"
 
+    _id: str
     _name: str
     _path: str
+    _dropbox_path: str
+    _nas_path: str
     _size: int
     _modified: int
     _type: str
     _checksum: str
-    _id: str
     _captured: int
+    _location: str
+    _dimensions: str
+    _duration: int
 
     date_time_format: str = "%Y-%m-%d %H-%M-%S"
 
@@ -31,6 +36,14 @@ class Entry:
     @property
     def path(self):
         return self._path
+
+    @property
+    def dropbox_path(self):
+        return self._dropbox_path if hasattr(self, "_dropbox_path") else None
+
+    @property
+    def nas_path(self):
+        return self._nas_path if hasattr(self, "_nas_path") else None
 
     @property
     def full_path(self):
@@ -58,16 +71,16 @@ class Entry:
 
     @property
     def captured_str(self):
-        return datetime.datetime.fromtimestamp(self.captured, tz=datetime.timezone(datetime.timedelta(hours=1)))\
+        return datetime.datetime.fromtimestamp(self.captured/1000.0, tz=datetime.timezone(datetime.timedelta(hours=1)))\
             .strftime(Entry.date_time_format)
 
     @property
     def modified_str(self):
-        return datetime.date.fromtimestamp(self.modified).isoformat()
+        return datetime.date.fromtimestamp(self.modified/1000.0).isoformat()
 
     @property
     def modified_time_str(self):
-        return datetime.datetime.fromtimestamp(self.modified, tz=datetime.timezone(datetime.timedelta(hours=1)))\
+        return datetime.datetime.fromtimestamp(self.modified/1000.0, tz=datetime.timezone(datetime.timedelta(hours=1)))\
             .strftime(Entry.date_time_format)
 
     @property
@@ -75,6 +88,33 @@ class Entry:
         value = self.name + self.path + str(self.size) +\
                 self.checksum + str(self.type)
         return hashlib.md5(value.encode()).hexdigest()
+
+    @property
+    def location(self):
+        return self._location if hasattr(self, "_location") else None
+
+    @location.setter
+    def location(self, loc: str):
+        self._location = loc
+
+    def set_location_from_lat_lon(self, latitude: float, longitude: float):
+        self._location = f"{round(latitude, 5)},{round(longitude,5)}"
+
+    @property
+    def dimensions(self):
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, dimensions):
+        self._dimensions = dimensions
+
+    @property
+    def duration(self):
+        return self._duration
+
+    @duration.setter
+    def duration(self, c):
+        self._duration = int(c)
 
     @name.setter
     def name(self, name: str):
@@ -87,6 +127,14 @@ class Entry:
     @path.setter
     def path(self, path: str):
         self._path = path
+
+    @dropbox_path.setter
+    def dropbox_path(self, path: str):
+        self._dropbox_path = path
+
+    @nas_path.setter
+    def nas_path(self, path: str):
+        self._nas_path = path
 
     @full_path.setter
     def full_path(self, full_path):
@@ -113,8 +161,8 @@ class Entry:
         return self._id
 
     @id.setter
-    def id(self, _id):
-        self._id = _id
+    def id(self, i):
+        self._id = i
 
     def to_dict(self):
         raise EntryException("to_dict called on base class Entry")

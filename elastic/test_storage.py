@@ -1,6 +1,6 @@
 import time
 from unittest import TestCase
-from typing import List, Generator
+from typing import List
 from elastic.connection import Connection
 from elastic.delete import Delete
 from elastic.retrieve import Retrieve
@@ -64,8 +64,8 @@ class TestStorage(TestCase):
         self.assertEqual(elastic_storage.list(item for item in self.file_list), len(self.file_list))
         time.sleep(1)
         reader = Retrieve(self.connection)
-        l = [entry for entry in reader.all_ids()]
-        self.assertEqual(len(l), len(self.file_list))
+        lst = [entry for entry in reader.all_ids()]
+        self.assertEqual(len(lst), len(self.file_list))
 
     def test_update(self):
         elastic_storage = Store(self.connection)
@@ -75,8 +75,8 @@ class TestStorage(TestCase):
         i = 0
         reader = Retrieve(self.connection)
         for entry in reader.all_entries():
-            newname = 'image{0}'.format(i)
-            change = {'name': newname, 'size': 1000+i}
+            new_name = 'image{0}'.format(i)
+            change = {'name': new_name, 'size': 1000+i}
             elastic_storage.update(change, entry.meta.id)
             new_entries[entry.meta.id] = change
             i = i + 1

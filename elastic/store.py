@@ -2,6 +2,7 @@ from typing import Generator
 from elasticsearch import Elasticsearch, NotFoundError
 from elasticsearch_dsl import Search
 from elastic.connection import Connection
+from constants import Constants
 
 
 class StorageError(ValueError):
@@ -39,17 +40,13 @@ class Store:
     def list(self, entries: Generator) -> int:
         count = 0
         for e in entries:
-            if e.kind not in (0, 1):
+            if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND):
                 raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
             hits = 0
             if not self.allow_duplicates:
                 s = Search(using=self.elastic, index=self.index).filter('term', hash=e.hash)
-                try:
-                    result = s.execute()
-                    hits = len(result.hits)
-                except NotFoundError:
-                    print(f"The index {self.index} does not exist yet, creating it")
-                    self.create_index()
+                result = s.execute()
+                hits = len(result.hits)
             if self.allow_duplicates or hits == 0:
                 self.elastic.index(index=self.index, body=e.to_dict())
                 count = count + 1
@@ -57,22 +54,3 @@ class Store:
 
     def update(self, change, _id: str):
         self.elastic.update(index=self.index, id=_id, body={'doc': change})
-
-    def create_index(self):
-        self.elastic.create(index=self.index, body={
-            "mappings": {
-                "properties": {
-                    "name": {"type": "text"},
-                    "path": {"type": "text"},
-                    "size": {"type": "integer"},
-                    "duration": {"type": "integer"},
-                    "captured": {"type": "date"},
-                    "modified": {"type": "date"},
-                    "kind": {"type": "keyword"},
-                    "type": {"type": "keyword"},
-                    "hash": {"type": "keyword"},
-                    "checksum": {"type": "keyword"},
-                    "location": {"type": "geo_point"}
-                }
-            }
-        })

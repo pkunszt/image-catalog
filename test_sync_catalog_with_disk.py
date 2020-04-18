@@ -32,11 +32,11 @@ class TestSyncCatalogWithDisk(TestCase):
         file.write("Add one more line")
         file.close()
 
-        self.assertEqual(sync_catalog_with_disk.main(['--index', self.test_index]), (1, 0, 6))
+        self.assertEqual(sync_catalog_with_disk.main(['--index', self.test_index]), (1, 0, len(file_list)))
 
         time.sleep(1)
         os.remove(self.test_path)
-        self.assertEqual(sync_catalog_with_disk.main(['--index', self.test_index]), (0, 1, 6))
+        self.assertEqual(sync_catalog_with_disk.main(['--index', self.test_index]), (0, 1, len(file_list)))
 
     def test_clear_data(self):
         connection = Connection()
