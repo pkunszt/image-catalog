@@ -50,3 +50,4 @@ class Video(Entry):
     def update(self, data: dict):
         for attr, value in data.items():
             setattr(self, attr, value)
+        return self

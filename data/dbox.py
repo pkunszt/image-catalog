@@ -29,8 +29,8 @@ class DBox:
             DBox._catalog_dbox = dropbox.Dropbox(DBox._get_config()['dbox_catalog_token'])
         return DBox._catalog_dbox
 
-    def list_dir(self, path: str) -> str:
-        result_list = self._dbox.files_list_folder(path)
+    def list_dir(self, path: str, recurse: bool = False) -> str:
+        result_list = self._dbox.files_list_folder(path, recursive=recurse)
         for item in result_list.entries:
             yield item.path_display
         while result_list.has_more:
