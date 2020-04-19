@@ -1,5 +1,6 @@
 from unittest import TestCase
 from data.video import Video, InvalidVideoError
+from constants import Constants
 
 
 class TestVideo(TestCase):
@@ -15,5 +16,5 @@ class TestVideo(TestCase):
         video = Video()
         video.name = "video.AVI"
         self.assertEqual(video.type, "avi")
-        self.assertEqual(video.kind, 1)
+        self.assertEqual(video.kind, Constants.VIDEO_KIND)
         self.assertEqual(video.name, "video.AVI")

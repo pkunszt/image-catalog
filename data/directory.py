@@ -4,7 +4,7 @@ from data.factory import Factory, FactoryError
 from data.entry import Entry
 
 
-class Reader:
+class Folder:
     """Class to scan a directory and return a list of entries, either image or video"""
     __file_list: List[Entry]
     __invalid_types_found: set

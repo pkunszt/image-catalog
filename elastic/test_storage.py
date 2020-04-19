@@ -5,7 +5,7 @@ from elastic.connection import Connection
 from elastic.delete import Delete
 from elastic.retrieve import Retrieve
 from elastic.store import Store
-from directory.read import Reader
+from data.directory import Folder
 
 
 class TestStorage(TestCase):
@@ -16,7 +16,7 @@ class TestStorage(TestCase):
 
     def setUp(self) -> None:
         time.sleep(1)
-        test_directory = Reader()
+        test_directory = Folder()
         test_directory.read(self.testDirectory)
         self.file_list = test_directory.file_list
 

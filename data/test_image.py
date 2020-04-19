@@ -1,6 +1,7 @@
 from unittest import TestCase
 from data.image import Image, InvalidImageError
 from data.factory import Factory
+from constants import Constants
 
 
 class TestImage(TestCase):
@@ -16,14 +17,14 @@ class TestImage(TestCase):
         image = Image()
         image.name = "image.jpeg"
         self.assertEqual(image.type, "jpeg")
-        self.assertEqual(image.kind, 0)
+        self.assertEqual(image.kind, Constants.IMAGE_KIND)
         self.assertEqual(image.name, "image.jpeg")
 
     def test_uppercase_image(self):
         image = Image()
         image.name = "MyPic.PNG"
         self.assertEqual(image.type, "png")
-        self.assertEqual(image.kind, 0)
+        self.assertEqual(image.kind, Constants.IMAGE_KIND)
         self.assertEqual(image.name, "MyPic.PNG")
 
     def test_diff(self):

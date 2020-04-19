@@ -3,7 +3,7 @@ import os
 import shutil
 import time
 import deduplicate_directories
-from directory import Reader
+from data import Folder
 from elastic import Store, Connection, Retrieve
 
 
@@ -20,7 +20,7 @@ class TestDeduplicateDirectories(unittest.TestCase):
         if not os.path.exists(test_path):
             shutil.copy2(test_source_path, test_path)
 
-        test_directory = Reader()
+        test_directory = Folder()
         test_directory.read(test_dir)
         file_list = test_directory.file_list
         connection = Connection()

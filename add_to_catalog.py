@@ -1,7 +1,6 @@
 import os
 import argparse
 import elastic
-import directory
 import data
 import default_args
 
@@ -48,7 +47,7 @@ if __name__ == '__main__':
         c = store.list(walkdbox(args.dirname))
 
     else:
-        folder = directory.Reader()
+        folder = data.Folder()
         c = 0
         walktree(args.dirname)
         invalid_types = folder.invalid_types

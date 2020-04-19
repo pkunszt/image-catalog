@@ -2,7 +2,7 @@ import os
 import time
 from unittest import TestCase
 import sync_catalog_with_disk
-from directory import Reader
+from data import Folder
 from elastic import Store, Connection, Delete, Retrieve
 
 
@@ -19,7 +19,7 @@ class TestSyncCatalogWithDisk(TestCase):
             file.writelines(["This is a testfile", "just some text, really"])
             file.close()
 
-        test_directory = Reader()
+        test_directory = Folder()
         test_directory.read(self.test_dir)
         file_list = test_directory.file_list
         connection = Connection()
