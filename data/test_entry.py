@@ -3,10 +3,6 @@ from data.entry import Entry, EntryException
 
 
 class TestEntry(TestCase):
-    def test_to_dict(self):
-        e = Entry()
-        self.assertRaises(EntryException, e.to_dict)
-
     def test_name_simple_filename(self):
         entry = Entry()
         entry.name = "myfile.ext"

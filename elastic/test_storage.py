@@ -84,3 +84,8 @@ class TestStorage(TestCase):
         for entry in reader.all_entries():
             self.assertEqual(entry.name, new_entries[entry.meta.id]['name'])
             self.assertEqual(entry.size, new_entries[entry.meta.id]['size'])
+
+    def test_store_captured_name(self):
+        elastic_storage = Store(self.connection)
+        self.assertEqual(elastic_storage.list((item for item in self.file_list), name_from_captured_date=True),
+                         len(self.file_list))

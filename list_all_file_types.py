@@ -9,7 +9,7 @@ def walktree(directory_name: str):
             if item.is_dir() and args.recursive:
                 walktree(item.path)
             if not item.name.startswith('.') and item.is_file():
-                types.add(os.path.splitext(item.name)[1])
+                types.add(os.path.splitext(item.name)[1].lower())
 
 
 if __name__ == '__main__':

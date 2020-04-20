@@ -1,6 +1,5 @@
 from __future__ import annotations
 from data.entry import Entry
-import inspect
 from constants import Constants
 
 
@@ -29,14 +28,6 @@ class Other(Entry):
         if self.type not in Constants.other_types:
             raise InvalidOtherError(f"Not an accepted other with extension {self.type}")
 
-    def to_dict(self):
-        output = dict()
-        for name, value in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))):
-            if name in Constants.attributes:
-                if value:
-                    output.update({name: value})
-        return output
-
     def diff(self, to: Other) -> dict:
         result = dict()
         me = self.to_dict()
@@ -46,8 +37,3 @@ class Other(Entry):
                 result[key] = other[key]
 
         return result
-
-    def update(self, data: dict):
-        for attr, value in data.items():
-            setattr(self, attr, value)
-        return self

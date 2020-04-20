@@ -3,8 +3,8 @@ class Constants:
                   "type", "checksum", "captured", "location", "dimensions", "duration", "kind")
     leave_out_when_reading_from_elastic = ("name", "path", "type", "hash", "kind", "meta")     # these are set automatically
     date_keys = ("modified", "captured")
-    image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef'}
-    video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v'}
+    image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef', 'cr2', 'mpo'}
+    video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v', 'wmv', 'mts', '3gp'}
     other_types = {'psd'}
 
     IMAGE_KIND = 1
@@ -52,6 +52,7 @@ class Constants:
     exif_height: str = "EXIF ExifImageLength"
     exif_date_time_format: str = "%Y:%m:%d %H:%M:%S"
     video_duration_format: str = "%Y-%m-%d %H:%M:%S"
+    video_duration_format2: str = "%Y-%m-%d/ %H:%M"
     GPS: dict = dict(latR="GPS GPSLatitudeRef",
                      lat="GPS GPSLatitude",
                      lonR="GPS GPSLongitudeRef",
@@ -67,3 +68,12 @@ class TestConstants:
     types = ["mov", "mov", "png", "heic", "jpg", "jpg", "jpeg", "jpeg", "psd"]
     kinds = [Constants.VIDEO_KIND] * 2 + [Constants.IMAGE_KIND] * 6 + [Constants.OTHER_KIND]
     duration = [11, 21]
+
+
+def get_months() -> list:
+    mon = ["January", "February", "March", "April", "May", "June", "July", "August", "September",
+           "October", "November", "December"]
+    return [
+        f"{k:02}_{v}"
+        for k, v in enumerate(mon, 1)
+    ]

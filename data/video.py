@@ -1,6 +1,5 @@
 from __future__ import annotations
 from data.entry import Entry
-import inspect
 from constants import Constants
 
 
@@ -29,14 +28,6 @@ class Video(Entry):
         if self.type not in Constants.video_types:
             raise InvalidVideoError(f"Not video with extension {self.type}")
 
-    def to_dict(self):
-        output = dict()
-        for name, value in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))):
-            if name in Constants.attributes:
-                if value:
-                    output.update({name: value})
-        return output
-
     def diff(self, to: Video) -> dict:
         result = dict()
         me = self.to_dict()
@@ -46,8 +37,3 @@ class Video(Entry):
                 result[key] = other[key]
 
         return result
-
-    def update(self, data: dict):
-        for attr, value in data.items():
-            setattr(self, attr, value)
-        return self

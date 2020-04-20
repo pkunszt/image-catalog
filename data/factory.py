@@ -144,10 +144,20 @@ class Factory:
         for line in lines:
             if line.find("Duration") > 0:
                 d = Factory._duration.match(line)
-                video.duration = int(d.group('hour'))*3600 + int(d.group('min')*60) + int(d.group('sec'))
+                video.duration = int(d.group('hour'))*3600 + int(d.group('min'))*60 + int(d.group('sec'))
             if line.find("creation_time") > 0:
-                video.captured = datetime.strptime(line[line.find(':')+2:],
-                                                   Constants.video_duration_format).timestamp() * 1000
+                try:
+                    video.captured = datetime.strptime(line[line.find(':')+2:],
+                                                       Constants.video_duration_format).timestamp() * 1000
+                except ValueError:
+                    try:
+                        video.captured = datetime.strptime(line[line.find(':')+2:].rstrip(),
+                                                           Constants.video_duration_format2).timestamp() * 1000
+                    except ValueError as e:
+                        print(line)
+                        print(video)
+                        print(lines)
+                        raise e
 
     @staticmethod
     def __other_from_directory_item(path: str) -> Other:

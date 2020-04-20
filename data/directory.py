@@ -72,3 +72,14 @@ class Folder:
             entry.to_dict()
             for entry in self.__file_list
         ]
+
+    def drop_duplicates(self):
+        """If more than one file in the same directory has the same checksum, just remove duplicates from the list"""
+        entry_list = dict()
+        for entry in self.file_list:
+            entry_list.setdefault(entry.checksum, []).append(entry)
+
+        for h, item in entry_list.items():
+            if len(item) > 1:
+                for to_delete in item[1:]:
+                    self.__file_list.remove(to_delete)

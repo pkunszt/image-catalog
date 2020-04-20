@@ -1,6 +1,8 @@
 import os
 import datetime
 import hashlib
+import inspect
+from constants import Constants
 
 
 class EntryException(LookupError):
@@ -165,4 +167,24 @@ class Entry:
         self._id = i
 
     def to_dict(self):
-        raise EntryException("to_dict called on base class Entry")
+        output = dict()
+        for name, value in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))):
+            if name in Constants.attributes:
+                if value:
+                    output.update({name: value})
+        return output
+
+    def update(self, data: dict):
+        for attr, value in data.items():
+            setattr(self, attr, value)
+        return self
+
+    def to_dict_using_name_from_captured(self):
+        if hasattr(self, "captured"):
+            self.name = self.captured_str + '.' + self.type
+        return self.to_dict()
+
+    def to_dict_using_name_from_modified(self):
+        if hasattr(self, "modified"):
+            self.name = self.modified_str + '.' + self.type
+        return self.to_dict()
