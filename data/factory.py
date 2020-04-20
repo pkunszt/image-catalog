@@ -1,6 +1,7 @@
 from typing import Pattern
 from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
+from data.other import Other, InvalidOtherError
 from data.dbox import DBox
 import os
 import io
@@ -8,6 +9,7 @@ import hashlib
 import exifread
 import pyheif
 import subprocess
+import inspect
 import re
 from datetime import datetime
 from constants import Constants
@@ -26,20 +28,23 @@ class Factory:
 
     @staticmethod
     def from_elastic_entry(e):
-        if e.kind == 1:
+        if e.kind == Constants.IMAGE_KIND:
             item = Image()
-        elif e.kind == 2:
+        elif e.kind == Constants.VIDEO_KIND:
             item = Video()
+        elif e.kind == Constants.OTHER_KIND:
+            item = Other()
         else:
             raise FactoryError(f"Entry mismatch, wrong kind {e.kind} found for: {e.name}; id:{e.meta.id}")
 
-        item.name = e.name
+        item.full_path = os.path.join(e.path, e.name)
         if e.type != item.type:
             raise FactoryError(f"Type mismatch for {e.name}")
-        item.path = e.path
-        item.size = e.size
-        item.checksum = e.checksum
-        item.modified = e.modified
+        if e.kind != item.kind:
+            raise FactoryError(f"Kind mismatch for {e.name}")
+        for attr, value in inspect.getmembers(e, lambda a: not(inspect.isroutine(a))):
+            if attr not in Constants.leave_out_when_reading_from_elastic:
+                setattr(item, attr, value)
         if item.hash != e.hash:
             raise FactoryError(f"Hash mismatch for {e.name}")
         item.id = e.meta.id
@@ -53,14 +58,13 @@ class Factory:
         try:
             return Factory.__image_from_directory_item(path)
         except InvalidImageError:
-            pass
-
-        try:
-            return Factory.__video_from_directory_item(path)
-        except InvalidVideoError:
-            pass
-
-        raise FactoryError(f"Path {path} is neither image nor video")
+            try:
+                return Factory.__video_from_directory_item(path)
+            except InvalidVideoError:
+                try:
+                    return Factory.__other_from_directory_item(path)
+                except InvalidOtherError:
+                    raise FactoryError(f"Path {path} is neither image nor video nor other")
 
     @staticmethod
     def from_dropbox(path: str):
@@ -74,7 +78,11 @@ class Factory:
                 result = Video()
                 result.full_path = path
             except InvalidVideoError:
-                raise FactoryError(f"Path {path} is neither image nor video")
+                try:
+                    result = Other()
+                    result.full_path = path
+                except InvalidOtherError:
+                    raise FactoryError(f"Path {path} is neither image nor video nor other")
         return result.update(dbox.get_metadata(path))
 
     @staticmethod
@@ -96,11 +104,14 @@ class Factory:
             tags = exifread.process_file(file, details=False)
             if tags:
                 if Constants.exif_date_time_original in tags.keys():
-                    dt = datetime.strptime(str(tags[Constants.exif_date_time_original]), Constants.exif_date_time_format)
+                    dt = datetime.strptime(str(tags[Constants.exif_date_time_original]),
+                                           Constants.exif_date_time_format)
                     image.captured = dt.timestamp() * 1000
                 if Constants.GPS['lat'] in tags.keys() and Constants.GPS['lon'] in tags.keys():
-                    lat = Factory.__coord_from_dms(tags[Constants.GPS['lat']].values, tags[Constants.GPS['latR']].values)
-                    lon = Factory.__coord_from_dms(tags[Constants.GPS['lon']].values, tags[Constants.GPS['lonR']].values)
+                    lat = Factory.__coord_from_dms(tags[Constants.GPS['lat']].values,
+                                                   tags[Constants.GPS['latR']].values)
+                    lon = Factory.__coord_from_dms(tags[Constants.GPS['lon']].values,
+                                                   tags[Constants.GPS['lonR']].values)
                     image.set_location_from_lat_lon(lat, lon)
                 if Constants.exif_width in tags.keys():
                     image.dimensions = f"{tags[Constants.exif_width].printable}x{tags[Constants.exif_height].printable}"
@@ -135,7 +146,14 @@ class Factory:
                 d = Factory._duration.match(line)
                 video.duration = int(d.group('hour'))*3600 + int(d.group('min')*60) + int(d.group('sec'))
             if line.find("creation_time") > 0:
-                video.captured = datetime.strptime(line[line.find(':')+2:], Constants.video_duration_format).timestamp() * 1000
+                video.captured = datetime.strptime(line[line.find(':')+2:],
+                                                   Constants.video_duration_format).timestamp() * 1000
+
+    @staticmethod
+    def __other_from_directory_item(path: str) -> Other:
+        other = Other()
+        Factory.__entry_from_directory_item(other, path)
+        return other
 
     @staticmethod
     def __entry_from_directory_item(e, path: str):

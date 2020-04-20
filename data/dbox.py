@@ -44,7 +44,7 @@ class DBox:
             size=file_metadata.size,
             checksum=file_metadata.content_hash,
             modified=int(file_metadata.client_modified.timestamp()*1000),
-            dropbox_path=path
+            dropbox_path=True
         )
         if hasattr(file_metadata, "media_info"):
             media_metadata = file_metadata.media_info.get_metadata()

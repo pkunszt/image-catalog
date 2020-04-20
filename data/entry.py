@@ -16,8 +16,8 @@ class Entry:
     _id: str
     _name: str
     _path: str
-    _dropbox_path: str
-    _nas_path: str
+    _dropbox_path: bool
+    _catalog: bool
     _size: int
     _modified: int
     _type: str
@@ -39,11 +39,11 @@ class Entry:
 
     @property
     def dropbox_path(self):
-        return self._dropbox_path if hasattr(self, "_dropbox_path") else None
+        return self._dropbox_path if hasattr(self, "_dropbox_path") else False
 
     @property
-    def nas_path(self):
-        return self._nas_path if hasattr(self, "_nas_path") else None
+    def catalog(self):
+        return self._catalog if hasattr(self, "_catalog") else False
 
     @property
     def full_path(self):
@@ -129,12 +129,12 @@ class Entry:
         self._path = path
 
     @dropbox_path.setter
-    def dropbox_path(self, path: str):
-        self._dropbox_path = path
+    def dropbox_path(self, flag: bool):
+        self._dropbox_path = flag
 
-    @nas_path.setter
-    def nas_path(self, path: str):
-        self._nas_path = path
+    @catalog.setter
+    def catalog(self, flag: bool):
+        self._catalog = flag
 
     @full_path.setter
     def full_path(self, full_path):

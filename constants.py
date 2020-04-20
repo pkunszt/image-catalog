@@ -1,12 +1,15 @@
 class Constants:
-    attributes = ("name", "path", "dropbox_path", "nas_path", "size", "modified", "hash",
+    attributes = ("name", "path", "dropbox_path", "catalog", "size", "modified", "hash",
                   "type", "checksum", "captured", "location", "dimensions", "duration", "kind")
+    leave_out_when_reading_from_elastic = ("name", "path", "type", "hash", "kind", "meta")     # these are set automatically
     date_keys = ("modified", "captured")
     image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef'}
     video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v'}
+    other_types = {'psd'}
 
     IMAGE_KIND = 1
     VIDEO_KIND = 2
+    OTHER_KIND = 3
 
     index = {
         "mappings": {
@@ -25,8 +28,8 @@ class Constants:
                                  "ignore_above": 256
                              }
                          }},
-                "dropbox_path": {"type": "keyword"},
-                "nas_path": {"type": "keyword"},
+                "dropbox_path": {"type": "boolean"},
+                "catalog": {"type": "boolean"},
                 "size": {"type": "integer"},
                 "duration": {"type": "integer"},
                 "captured": {"type": "date"},
@@ -40,6 +43,9 @@ class Constants:
             }
         }
     }
+
+    catalog_root: str = "ImageCatalog"
+    nas_mount: str = "/Volumes/Photos"
 
     exif_date_time_original: str = "EXIF DateTimeOriginal"
     exif_width: str = "EXIF ExifImageWidth"
