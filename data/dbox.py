@@ -38,7 +38,7 @@ class DBox:
             for item in result_list.entries:
                 yield item.path_display
 
-    def get_metadata(self, path: str):
+    def get_metadata(self, path: str) -> dict:
         file_metadata = self._dbox.files_get_metadata(path, include_media_info=True)
         result = dict(
             size=file_metadata.size,
@@ -46,7 +46,7 @@ class DBox:
             modified=int(file_metadata.client_modified.timestamp()*1000),
             dropbox_path=True
         )
-        if hasattr(file_metadata, "media_info"):
+        if hasattr(file_metadata, "media_info") and file_metadata.media_info is not None:
             media_metadata = file_metadata.media_info.get_metadata()
             if hasattr(media_metadata, "time_taken") and media_metadata.time_taken is not None \
                     and media_metadata.time_taken.timestamp() > 0:
@@ -58,6 +58,10 @@ class DBox:
                 result.update(location=f"{round(loc.latitude, 5)},{round(loc.longitude, 5)}")
             if hasattr(media_metadata, "duration") and media_metadata.duration is not None \
                     and media_metadata.duration > 0:
-                result.update(duration=media_metadata.duration)
+                result.update(duration=int(media_metadata.duration/1000))  # dropbox extracts duration in millisec
 
         return result
+
+    def entries_in_dir(self, path:str, recurse: bool = False) -> dict:
+        for file in self.list_dir(path, recurse):
+            yield self.get_metadata(file)

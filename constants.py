@@ -57,3 +57,13 @@ class Constants:
                      lonR="GPS GPSLongitudeRef",
                      lon="GPS GPSLongitude"
                      )
+
+
+class TestConstants:
+    testdir = "testfiles"
+    files = ["P1030250.MOV", "boarding.mov", "cartoon.png", "food.heic",
+             "milky-way-nasa.jpg", "spiderman.jpg", "spidey.jpeg", "thor.jpeg", "ztest.psd"]
+    sizes = [3691944, 30830885, 876273, 1643711, 9711423, 28398, 28398, 5906, 5]
+    types = ["mov", "mov", "png", "heic", "jpg", "jpg", "jpeg", "jpeg", "psd"]
+    kinds = [Constants.VIDEO_KIND] * 2 + [Constants.IMAGE_KIND] * 6 + [Constants.OTHER_KIND]
+    duration = [11, 21]
