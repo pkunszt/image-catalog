@@ -40,7 +40,7 @@ class Store:
     def list(self, entries: Generator) -> int:
         count = 0
         for e in entries:
-            if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND):
+            if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND, Constants.OTHER_KIND):
                 raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
             hits = 0
             if not self.allow_duplicates:

@@ -44,7 +44,6 @@ class TestStorage(TestCase):
         reader = Retrieve(self.connection)
         id_list = [ide for ide in reader.all_ids()]
         should = len(id_list)
-        print(id_list)
         count = 0
         if should > 0:
             deleter = Delete(self.connection)
