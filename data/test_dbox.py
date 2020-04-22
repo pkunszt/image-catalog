@@ -64,7 +64,7 @@ class TestDBox(TestCase):
         d = DBox(True)
         d.put_file(os.path.join(".", TestConstants.testdir, TestConstants.files[4]), TestConstants.sizes[4],
                    os.path.join("/", TestConstants.testdir, "testsubdir"), TestConstants.files[4],
-                   datetime.datetime.fromtimestamp(987974751))
+                   datetime.datetime.utcfromtimestamp(987974751))
 
     def test_put_large_file(self):
         d = DBox(True)
@@ -72,4 +72,4 @@ class TestDBox(TestCase):
         st = os.stat(filename)
         d.put_file(filename, st.st_size,
                    os.path.join("/", TestConstants.testdir, "testsubdir"), "test.m4v",
-                   datetime.datetime.fromtimestamp(st.st_mtime))
+                   datetime.datetime.utcfromtimestamp(st.st_mtime))

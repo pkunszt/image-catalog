@@ -74,21 +74,21 @@ class Entry:
 
     @property
     def captured_str(self):
-        return datetime.datetime.fromtimestamp(self.captured / 1000.0) \
+        return datetime.datetime.utcfromtimestamp(self.captured / 1000.0) \
             .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
 
     @property
     def modified_str(self):
-        return datetime.date.fromtimestamp(self.modified / 1000.0).isoformat()
+        return datetime.datetime.utcfromtimestamp(self.modified / 1000.0).isoformat()
 
     @property
     def modified_time_str(self):
-        return datetime.datetime.fromtimestamp(self.modified / 1000.0) \
+        return datetime.datetime.utcfromtimestamp(self.modified / 1000.0) \
             .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
 
     @property
     def modified_ts(self):
-        return datetime.datetime.fromtimestamp(self.modified / 1000.0)
+        return datetime.datetime.utcfromtimestamp(self.modified / 1000.0)
 
     @property
     def path_hash(self):
