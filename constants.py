@@ -60,6 +60,8 @@ class Constants:
                      lon="GPS GPSLongitude"
                      )
 
+    known_locations = {'Riederalp', 'Le Lignon', 'Zürich', 'Winterthur', 'Los Angeles', 'Barcelona'}
+
 
 class TestConstants:
     testdir = "testfiles"

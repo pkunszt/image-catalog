@@ -44,61 +44,42 @@ class Store:
     def elastic(self):
         return self.__elastic
 
-    def list(self, entries: Generator,
-             destination_folder: str = "",
-             name_from_captured_date: bool = False,
-             name_from_modified_date: bool = False,
-             keep_manual_names: bool = False) -> list:
+    def list(self, entries: Generator) -> list:
         stored = []
-        from_path = ""
+        self.__path_hashes.clear()
+        self.__name_hashes.clear()
         for e in entries:
-
             if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND, Constants.OTHER_KIND):
                 raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
 
-            if not from_path:
-                from_path = e.path
-            elif e.path != from_path:
-                raise StorageError(f"""Storing list from different dirs not allowed. 
-                Until now we had {from_path} . Now the next item {e.name} has {e.path}""")
-
-            original_path = e.full_path
-            if destination_folder:
-                e.path = destination_folder
-
-            doc_to_store = e.to_dict()
-            if name_from_captured_date or name_from_modified_date or keep_manual_names:
-                self.set_name(doc_to_store, e, name_from_captured_date, name_from_modified_date, keep_manual_names)
-
             hits = 0
             if not self.allow_duplicates:
-                # don't store if we have this already in our list of hashes we already stored
-                if doc_to_store['path_hash'] in self.__path_hashes:
+                # don't store if we have this already in our list of hashes we already stored. path_hash = path+checksum
+                if e.path_hash in self.__path_hashes:
                     continue
-                s = Search(using=self.elastic, index=self.index).filter('term', path_hash=doc_to_store['path_hash'])
+                s = Search(using=self.elastic, index=self.index).filter('term', path_hash=e.path_hash)
                 result = s.execute()
                 hits = len(result.hits)
             if self.allow_duplicates or hits == 0:
                 # avoid same name
-                self.get_name(doc_to_store)
+                self.get_name(e)
                 try:
-                    self.elastic.index(index=self.index, body=doc_to_store)
-                except RequestError as e:
+                    self.elastic.index(index=self.index, body=e.to_dict())
+                except RequestError as err:
                     print("------------- Failed to store:-------------")
-                    print(doc_to_store)
-                    print(e)
+                    print(e.to_dict())
+                    print(err)
                 else:
                     if not self.allow_duplicates:
-                        self.__path_hashes.add(doc_to_store['path_hash'])
-                        self.__name_hashes.add(doc_to_store['hash'])
-                    doc_to_store['original_path'] = original_path
-                    stored.append(doc_to_store)
+                        self.__path_hashes.add(e.path_hash)
+                        self.__name_hashes.add(e.hash)
+                    stored.append(e)
         return stored
 
-    def get_name(self, doc_to_store):
+    def get_name(self, entry):
         """If a file with the same name already exists, append a '_n' to the name to enumerate through"""
-        name = doc_to_store['name']
-        name_hash = doc_to_store['hash']
+        name = entry.name
+        name_hash = entry.hash
         while self.has_name(name_hash):
             n, e = os.path.splitext(name)
             prev_n = n.split("_")[-1]
@@ -107,9 +88,8 @@ class Store:
             else:
                 n = "_".join(n.split("_")[0:-1]) + '_' + str(int(prev_n)+1)
             name = n + e
-            name_hash = Entry.hash_from_name(os.path.join(doc_to_store['path'], name))
-        doc_to_store['name'] = name
-        doc_to_store['hash'] = name_hash
+            name_hash = Entry.hash_from_name(os.path.join(entry.path, name))
+        entry.name = name
 
     def has_name(self, h: str) -> bool:
         if h in self.__name_hashes:
@@ -117,39 +97,6 @@ class Store:
         s = Search(using=self.elastic, index=self.index).filter('term', hash=h)
         result = s.execute()
         return len(result.hits) > 0
-
-    @staticmethod
-    def set_name(doc_to_store, entry, name_from_captured_date, name_from_modified_date, keep_manual_names):
-        name, ext = os.path.splitext(entry.name)
-        changed = False
-        if name_from_modified_date and hasattr(entry, "modified"):
-            # modification time is only informative so much. Sometimes more info may be extracted later from
-            # the original name, so append / keep it.
-            doc_to_store['name'] = entry.modified_time_str + '@' + name + ext.lower()
-            changed = True
-        if (name_from_captured_date or name_from_modified_date) and hasattr(entry, "captured"):
-            # if there is a captured date/time, use that, also for modification given
-            doc_to_store['name'] = entry.captured_str + ext.lower()
-            changed = True
-        if keep_manual_names:
-            # if there is significant text in the name already, keep that text, ignore numerals
-            chars_only = "".join([
-                c
-                for c in name
-                if ('A' <= c <= 'z') or c == ' '
-            ])
-            if len(chars_only)/len(name) > 0.5:
-                doc_to_store['name'] = name
-                if hasattr(entry, "captured"):
-                    # but append the captured time to the text if there is one
-                    doc_to_store['name'] += ' ' + entry.captured_str
-                doc_to_store['name'] += ext.lower()
-                changed = True
-            elif hasattr(entry, "captured"):
-                doc_to_store['name'] = entry.captured_str + ext.lower()
-                changed = True
-        if changed:
-            doc_to_store['hash'] = Entry.hash_from_name(os.path.join(doc_to_store['path'], doc_to_store['name']))
 
     def update(self, change, _id: str):
         self.elastic.update(index=self.index, id=_id, body={'doc': change})

@@ -28,6 +28,7 @@ class Entry:
     _location: str
     _dimensions: str
     _duration: int
+    _original_path: str
 
     date_time_format: str = "%Y-%m-%d %H-%M-%S"
 
@@ -133,6 +134,10 @@ class Entry:
         self._name = name
         self._type = image_type.lower()[1:]
 
+    @property
+    def original_path(self):
+        return self._original_path
+
     @path.setter
     def path(self, path: str):
         self._path = path
@@ -172,6 +177,9 @@ class Entry:
     @id.setter
     def id(self, i):
         self._id = i
+
+    def save_path(self):
+        self._original_path = self.full_path
 
     def to_dict(self):
         output = dict()

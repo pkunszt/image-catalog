@@ -11,57 +11,54 @@ import default_args
 import constants
 
 
-def walk_year(directory_name: str, dest_path: str):
+def walk_year(directory_name: str, dest_path: str) -> int:
     months = constants.get_months()
     count = 0
     with os.scandir(directory_name) as iterator:
         for item in iterator:
             if item.is_dir():
                 if item.name in months:
-                    count += catalog_month(item.path, os.path.join(dest_path, item.name))
+                    count += catalog_dir(item.path, os.path.join(dest_path, item.name), keep_names=False)
                 else:
-                    count += catalog_as_is(item.path, os.path.join(dest_path, item.name))
+                    count += catalog_dir(item.path, os.path.join(dest_path, item.name))
 
     return count
 
 
-def catalog_month(month_directory: str, dest_path: str):
-    count = 0
-    with os.scandir(month_directory) as iterator:
-        for item in iterator:
-            if item.is_dir():
-                count += catalog_as_is(item.path, os.path.join(dest_path, item.name))
-
-    return count + read_and_store_directory(month_directory, dest_path)
-
-
-def catalog_as_is(directory: str, dest_path: str):
+def catalog_dir(directory: str, dest_path: str, keep_names: bool = True) -> int:
     count = 0
     if directory in ignored_dirs:
         return 0
     with os.scandir(directory) as iterator:
         for item in iterator:
             if item.is_dir():
-                count += catalog_as_is(item.path, os.path.join(dest_path, item.name))
+                count += catalog_dir(item.path, os.path.join(dest_path, item.name))
 
-    return count + read_and_store_directory(directory, dest_path, keep_names=True)
+    return read_and_store_directory(directory, dest_path, keep_names) + count
 
 
-def read_and_store_directory(directory, dest_path, keep_names=False):
+def read_and_store_directory(directory: str, dest_path: str, keep_names: bool) -> int:
     folder.read(directory)
     folder.drop_duplicates()
-    stored = store.list(folder.files, destination_folder=dest_path, name_from_captured_date=True,
-                        keep_manual_names=keep_names)
-    copy_to_catalog(stored)
-    print(f"Added from {directory} : {len(stored)}")
-    return len(stored)
+    folder.save_paths()
+    folder.update_filmchen_and_locations()
+    folder.update_names(destination_folder=dest_path,
+                        catalog_entry=True,
+                        name_from_captured_date=True,
+                        name_from_modified_date=False,
+                        keep_manual_names=True)
+
+    stored_files = store.list(folder.files)
+    copy_to_catalog(stored_files)
+    print(f"Added from {directory} : {len(stored_files)}")
+    return len(stored_files)
 
 
 def copy_to_catalog(stored_items):
     for item in stored_items:
-        source = item['original_path']
-        dest_path = os.path.join(dest_root, item['path'])
-        dest = os.path.join(dest_path, item['name'])
+        source = item.original_path
+        dest_path = os.path.join(dest_root, item.path)
+        dest = os.path.join(dest_path, item.name)
         if not os.path.exists(dest_path):
             pathlib.Path(dest_path).mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest)
@@ -74,7 +71,8 @@ if __name__ == '__main__':
     Duplicates in the same dir are not stored, but duplicates in named directories outside of month are.""")
     parser.add_argument('basedir', type=str, help='Base directory of old catalog.')
     parser.add_argument('year', type=str, help='Year to import.')
-    parser.add_argument('--catalog_root', type=str, help='Use this as catalog root')
+    parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
+    parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
     default_args.default_arguments(parser)
     args = parser.parse_args()
 
@@ -91,8 +89,12 @@ if __name__ == '__main__':
     with open("config.json", 'r') as file:
         config = json.load(file)
     dest_root = config['nas_root']
-    if args.catalog_root:
-        dest_root = args.catalog_root
+    if args.nas_root:
+        dest_root = args.nas_root
+
+    dbox_root = config['dropbox_root']
+    if args.dropbox_root:
+        dest_root = args.dropbox_root
 
     ignored_dirs = ["_gsdata_"]
     connection = elastic.Connection(args.host, args.port)

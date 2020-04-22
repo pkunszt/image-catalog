@@ -1,5 +1,8 @@
 import os
 from typing import List, Generator
+import reverse_geocoder
+import geopy
+from constants import Constants
 from data.factory import Factory, FactoryError
 from data.entry import Entry
 
@@ -9,6 +12,7 @@ class Folder:
     __file_list: List[Entry]
     __invalid_types_found: set
     __valid_types_found: set
+    geo: geopy.geocoders.osm.Nominatim = geopy.geocoders.Nominatim(user_agent="my_catalog")
 
     def __init__(self):
         self.__file_list = []
@@ -83,3 +87,79 @@ class Folder:
             if len(item) > 1:
                 for to_delete in item[1:]:
                     self.__file_list.remove(to_delete)
+
+    def save_paths(self):
+        for entry in self.file_list:
+            entry.save_path()
+
+    def update_filmchen_and_locations(self):
+        """In the given list 'move' the movies into 'filmchen' folder and if items have locations
+        then resolve the city and 'move' them into a city folder"""
+        for entry in self.file_list:
+            if entry.kind == Constants.VIDEO_KIND:
+                entry.path = os.path.join(entry.path, 'filmchen')
+                continue
+            if entry.location:
+                lat, lon = entry.location.split(',')
+                default_name = reverse_geocoder.search([(float(lat), float(lon))])[0]['name']
+                alt_names = Folder.geo.reverse(entry.location).address.split(', ')
+
+                if len(alt_names) > 4:
+                    if alt_names[-5] in Constants.known_locations:
+                        entry.path = os.path.join(entry.path, alt_names[-5])
+                        continue
+                if len(alt_names) > 5:
+                    if alt_names[-6] in Constants.known_locations:
+                        entry.path = os.path.join(entry.path, alt_names[-6])
+                        continue
+                entry.path = os.path.join(entry.path, default_name)
+
+    def update_names(self,
+                     destination_folder: str = "",
+                     catalog_entry: bool = False,
+                     name_from_captured_date: bool = False,
+                     name_from_modified_date: bool = False,
+                     keep_manual_names: bool = False) -> None:
+        for entry in self.file_list:
+            Folder.set_name(entry,
+                            destination_folder=destination_folder,
+                            catalog_entry=catalog_entry,
+                            name_from_captured_date=name_from_captured_date,
+                            name_from_modified_date=name_from_modified_date,
+                            keep_manual_names=keep_manual_names)
+
+    @staticmethod
+    def set_name(entry,
+                 destination_folder: str = "",
+                 catalog_entry: bool = False,
+                 name_from_captured_date: bool = False,
+                 name_from_modified_date: bool = False,
+                 keep_manual_names: bool = False) -> None:
+
+        if destination_folder:
+            entry.path = destination_folder
+        if catalog_entry:
+            entry.catalog = catalog_entry
+
+        name, ext = os.path.splitext(entry.name)
+        if name_from_modified_date and hasattr(entry, "modified"):
+            # modification time is only informative so much. Sometimes more info may be extracted later from
+            # the original name, so append / keep it.
+            entry.name = entry.modified_time_str + '@' + name + ext.lower()
+        if (name_from_captured_date or name_from_modified_date) and hasattr(entry, "captured"):
+            # if there is a captured date/time, use that, also for modification given
+            entry.name = entry.captured_str + ext.lower()
+        if keep_manual_names:
+            # if there is significant text in the name already, keep that text, ignore numerals
+            chars_only = "".join([
+                c
+                for c in name
+                if ('A' <= c <= 'z') or c == ' '
+            ])
+            if len(chars_only)/len(name) > 0.5:
+                if hasattr(entry, "captured"):
+                    # but append the captured time to the text if there is one
+                    entry.name += name + ' ' + entry.captured_str + ext.lower()
+            elif hasattr(entry, "captured"):
+                entry.name = entry.captured_str + ext.lower()
+
