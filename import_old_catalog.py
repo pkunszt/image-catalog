@@ -9,6 +9,7 @@ import elastic
 import data
 import default_args
 import constants
+from data import DBox
 
 
 def walk_year(directory_name: str, dest_path: str) -> int:
@@ -49,12 +50,13 @@ def read_and_store_directory(directory: str, dest_path: str, keep_names: bool) -
                         keep_manual_names=True)
 
     stored_files = store.list(folder.files)
-    copy_to_catalog(stored_files)
+    copy_to_nas_catalog(stored_files)
+    copy_to_dropbox_catalog(stored_files)
     print(f"Added from {directory} : {len(stored_files)}")
     return len(stored_files)
 
 
-def copy_to_catalog(stored_items):
+def copy_to_nas_catalog(stored_items):
     for item in stored_items:
         source = item.original_path
         dest_path = os.path.join(dest_root, item.path)
@@ -62,6 +64,13 @@ def copy_to_catalog(stored_items):
         if not os.path.exists(dest_path):
             pathlib.Path(dest_path).mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, dest)
+
+
+def copy_to_dropbox_catalog(stored_items):
+    for item in stored_items:
+        source = item.original_path
+        dest_path = os.path.join(dbox_root, item.path)
+        dbox.put_file(source, item.size, dest_path, item.name, item.modified_ts)
 
 
 if __name__ == '__main__':
@@ -103,6 +112,7 @@ if __name__ == '__main__':
     store = elastic.Store(connection)
 
     folder = data.Folder()
+    dbox = DBox(True)
     c = walk_year(import_path, args.year)
 
     print(f"Added {c} entries to catalog.")

@@ -87,6 +87,10 @@ class Entry:
             .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
 
     @property
+    def modified_ts(self):
+        return datetime.datetime.fromtimestamp(self.modified / 1000.0)
+
+    @property
     def path_hash(self):
         value = self.path + self.checksum
         return hashlib.md5(value.encode()).hexdigest()
