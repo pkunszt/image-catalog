@@ -1,7 +1,7 @@
 class Constants:
-    attributes = ("name", "path", "dropbox_path", "catalog", "size", "modified", "hash",
+    attributes = ("name", "path", "dropbox_path", "catalog", "size", "modified", "hash", "path_hash",
                   "type", "checksum", "captured", "location", "dimensions", "duration", "kind")
-    leave_out_when_reading_from_elastic = ("name", "path", "type", "hash", "kind", "meta")     # these are set automatically
+    leave_out_when_reading_from_elastic = ("name", "path", "type", "hash", "path_hash", "kind", "meta")
     date_keys = ("modified", "captured")
     image_types = {'png', 'jpg', 'jpeg', 'jpg2', 'jp2', 'heic', 'bmp', 'gif', 'orf', 'nef', 'cr2', 'mpo'}
     video_types = {'mov', 'avi', 'mp4', 'mpg', 'm4v', 'wmv', 'mts', '3gp'}
@@ -37,6 +37,7 @@ class Constants:
                 "kind": {"type": "keyword"},
                 "type": {"type": "keyword"},
                 "hash": {"type": "keyword"},
+                "path_hash": {"type": "keyword"},
                 "dimensions": {"type": "keyword"},
                 "checksum": {"type": "keyword"},
                 "location": {"type": "geo_point"}
@@ -68,6 +69,11 @@ class TestConstants:
     types = ["mov", "mov", "png", "heic", "jpg", "jpg", "jpeg", "jpeg", "psd"]
     kinds = [Constants.VIDEO_KIND] * 2 + [Constants.IMAGE_KIND] * 6 + [Constants.OTHER_KIND]
     duration = [11, 21]
+
+    captured_test = 1487456138000
+    captured_test_str = "2017-02-18 23-15-38"
+    modified_test = 1587456138000
+    modified_test_str = "2020-04-21 09-02-18"
 
 
 def get_months() -> list:

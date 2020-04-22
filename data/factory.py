@@ -47,6 +47,8 @@ class Factory:
                 setattr(item, attr, value)
         if item.hash != e.hash:
             raise FactoryError(f"Hash mismatch for {e.name}")
+        if item.path_hash != e.path_hash:
+            raise FactoryError(f"Path-hash mismatch for {e.name}")
         item.id = e.meta.id
 
         return item
@@ -104,9 +106,14 @@ class Factory:
             tags = exifread.process_file(file, details=False)
             if tags:
                 if Constants.exif_date_time_original in tags.keys():
-                    dt = datetime.strptime(str(tags[Constants.exif_date_time_original]),
-                                           Constants.exif_date_time_format)
-                    image.captured = dt.timestamp() * 1000
+                    try:
+                        dt = datetime.strptime(str(tags[Constants.exif_date_time_original]),
+                                               Constants.exif_date_time_format)
+                    except ValueError as e:
+                        print(e)
+                        print(image.full_path)
+                    else:
+                        image.captured = dt.timestamp() * 1000
                 if Constants.GPS['lat'] in tags.keys() and Constants.GPS['lon'] in tags.keys():
                     lat = Factory.__coord_from_dms(tags[Constants.GPS['lat']].values,
                                                    tags[Constants.GPS['latR']].values)

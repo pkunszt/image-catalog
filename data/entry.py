@@ -73,23 +73,30 @@ class Entry:
 
     @property
     def captured_str(self):
-        return datetime.datetime.fromtimestamp(self.captured/1000.0, tz=datetime.timezone(datetime.timedelta(hours=1)))\
-            .strftime(Entry.date_time_format)
+        return datetime.datetime.fromtimestamp(self.captured / 1000.0) \
+            .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
 
     @property
     def modified_str(self):
-        return datetime.date.fromtimestamp(self.modified/1000.0).isoformat()
+        return datetime.date.fromtimestamp(self.modified / 1000.0).isoformat()
 
     @property
     def modified_time_str(self):
-        return datetime.datetime.fromtimestamp(self.modified/1000.0, tz=datetime.timezone(datetime.timedelta(hours=1)))\
-            .strftime(Entry.date_time_format)
+        return datetime.datetime.fromtimestamp(self.modified / 1000.0) \
+            .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
+
+    @property
+    def path_hash(self):
+        value = self.path + self.checksum
+        return hashlib.md5(value.encode()).hexdigest()
 
     @property
     def hash(self):
-        value = self.name + self.path + str(self.size) +\
-                self.checksum + str(self.type)
-        return hashlib.md5(value.encode()).hexdigest()
+        return type(self).hash_from_name(self.full_path)
+
+    @staticmethod
+    def hash_from_name(path):
+        return hashlib.md5(path.encode()).hexdigest()
 
     @property
     def location(self):
@@ -100,7 +107,7 @@ class Entry:
         self._location = loc
 
     def set_location_from_lat_lon(self, latitude: float, longitude: float):
-        self._location = f"{round(latitude, 5)},{round(longitude,5)}"
+        self._location = f"{round(latitude, 5)},{round(longitude, 5)}"
 
     @property
     def dimensions(self):
@@ -168,7 +175,7 @@ class Entry:
 
     def to_dict(self):
         output = dict()
-        for name, value in inspect.getmembers(self, lambda a: not(inspect.isroutine(a))):
+        for name, value in inspect.getmembers(self, lambda a: not (inspect.isroutine(a))):
             if name in Constants.attributes:
                 if value:
                     output.update({name: value})
@@ -178,13 +185,3 @@ class Entry:
         for attr, value in data.items():
             setattr(self, attr, value)
         return self
-
-    def to_dict_using_name_from_captured(self):
-        if hasattr(self, "captured"):
-            self.name = self.captured_str + '.' + self.type
-        return self.to_dict()
-
-    def to_dict_using_name_from_modified(self):
-        if hasattr(self, "modified"):
-            self.name = self.modified_str + '.' + self.type
-        return self.to_dict()
