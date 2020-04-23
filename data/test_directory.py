@@ -1,6 +1,6 @@
 from unittest import TestCase
 import os
-from constants import TestConstants
+from constants import TestConstants, Constants
 from data import Image
 from data.directory import Folder
 
@@ -100,3 +100,14 @@ class TestFolder(TestCase):
                         name_from_modified_date=False,
                         keep_manual_names=True)
         self.assertEqual(image.name, TestConstants.captured_test_str + ext)
+
+    def test_update_filmchen_and_locations(self):
+        test_directory = Folder()
+        test_directory.read(os.path.join("..", TestConstants.testdir))
+
+        test_directory.update_filmchen_and_locations()
+        for item in test_directory.files:
+            if item.kind == Constants.VIDEO_KIND:
+                self.assertEqual(os.path.basename(item.path), 'filmchen')
+            if item.type == 'heic':
+                self.assertEqual(item.name.split(' ')[-1], "Winterthur.heic")

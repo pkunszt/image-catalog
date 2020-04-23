@@ -25,8 +25,7 @@ class Folder:
         as a list of dictionary objects or as the generator with all entries.
         Entries are images or videos, according to data.image and data.video
 
-        Argument:
-        directory_name -- name of the full path of the directory to scan.
+        :param str directory_name: Name of the full path of the directory to scan.
         """
         if not os.path.isdir(directory_name):
             raise NotADirectoryError(directory_name + " is not a directory!")
@@ -39,7 +38,7 @@ class Folder:
                     self.__add_entry(item.path)
 
     def __add_entry(self, path: str) -> None:
-        """Adding an entry, specificity based on whether it is an image or a video. Args stat and path."""
+        """Adding an entry based on the path, internal method. Will add to valid or invalid sets the type at hand"""
         try:
             item = Factory.from_path(path)
             self.__file_list.append(item)
@@ -64,7 +63,7 @@ class Folder:
 
     @property
     def files(self) -> Generator:
-        """Return the list as a generator to be iterated through"""
+        """Return the list as a generator to be iterated through immediately"""
         return (
             entry
             for entry in self.__file_list
@@ -89,30 +88,31 @@ class Folder:
                     self.__file_list.remove(to_delete)
 
     def save_paths(self):
+        """Call the save_path method of :class:`Entry` for each entry in our file list."""
         for entry in self.file_list:
             entry.save_path()
 
-    def update_filmchen_and_locations(self):
+    def update_filmchen_and_locations(self, is_month: bool = False):
         """In the given list 'move' the movies into 'filmchen' folder and if items have locations
-        then resolve the city and 'move' them into a city folder"""
+        then resolve the city and append the location city to the filename"""
         for entry in self.file_list:
-            if entry.kind == Constants.VIDEO_KIND:
+            if is_month and entry.kind == Constants.VIDEO_KIND and not entry.path.endswith('filmchen'):
                 entry.path = os.path.join(entry.path, 'filmchen')
-                continue
             if entry.location:
                 lat, lon = entry.location.split(',')
                 default_name = reverse_geocoder.search([(float(lat), float(lon))])[0]['name']
                 alt_names = Folder.geo.reverse(entry.location).address.split(', ')
 
+                name, ext = os.path.splitext(entry.name)
                 if len(alt_names) > 4:
                     if alt_names[-5] in Constants.known_locations:
-                        entry.path = os.path.join(entry.path, alt_names[-5])
+                        entry.name = name + ' ' + alt_names[-5] + ext
                         continue
                 if len(alt_names) > 5:
                     if alt_names[-6] in Constants.known_locations:
-                        entry.path = os.path.join(entry.path, alt_names[-6])
+                        entry.name = name + ' ' + alt_names[-6] + ext
                         continue
-                entry.path = os.path.join(entry.path, default_name)
+                entry.name = name + ' ' + default_name + ext
 
     def update_names(self,
                      destination_folder: str = "",
@@ -121,6 +121,7 @@ class Folder:
                      name_from_captured_date: bool = False,
                      name_from_modified_date: bool = False,
                      keep_manual_names: bool = False) -> None:
+        """Call set_name for every name. See set_name."""
         for entry in self.file_list:
             Folder.set_name(entry,
                             destination_folder=destination_folder,
@@ -138,6 +139,12 @@ class Folder:
                  name_from_captured_date: bool = False,
                  name_from_modified_date: bool = False,
                  keep_manual_names: bool = False) -> None:
+        """ Set the name for a file based on the following criteria:
+
+        If the name_from_captured_date is True, and the entry has the captured time, use that to set the file name.
+
+        If the name_from_modified_date is True, and it does have the captured_date, then again the captured date is set.
+         """
 
         if destination_folder:
             entry.path = destination_folder

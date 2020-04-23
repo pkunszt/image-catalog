@@ -18,15 +18,17 @@ def walk_year(directory_name: str, dest_path: str) -> int:
     with os.scandir(directory_name) as iterator:
         for item in iterator:
             if item.is_dir():
+                if args.month and item.name != args.month:
+                    continue
                 if item.name in months:
-                    count += catalog_dir(item.path, os.path.join(dest_path, item.name), keep_names=False)
+                    count += catalog_dir(item.path, os.path.join(dest_path, item.name), is_month_root=True)
                 else:
                     count += catalog_dir(item.path, os.path.join(dest_path, item.name))
 
     return count
 
 
-def catalog_dir(directory: str, dest_path: str, keep_names: bool = True) -> int:
+def catalog_dir(directory: str, dest_path: str, is_month_root: bool = False) -> int:
     count = 0
     if directory in ignored_dirs:
         return 0
@@ -35,24 +37,25 @@ def catalog_dir(directory: str, dest_path: str, keep_names: bool = True) -> int:
             if item.is_dir():
                 count += catalog_dir(item.path, os.path.join(dest_path, item.name))
 
-    return read_and_store_directory(directory, dest_path, keep_names) + count
+    return read_and_store_directory(directory, dest_path, is_month_root) + count
 
 
-def read_and_store_directory(directory: str, dest_path: str, keep_names: bool) -> int:
+def read_and_store_directory(directory: str, dest_path: str, is_month_root: bool) -> int:
     folder.read(directory)
     folder.drop_duplicates()
     folder.save_paths()
-    folder.update_filmchen_and_locations()
     folder.update_names(destination_folder=dest_path,
                         nas=True,
-                        dropbox=True,
+                        dropbox=args.dropbox,
                         name_from_captured_date=True,
                         name_from_modified_date=False,
-                        keep_manual_names=True)
+                        keep_manual_names=not is_month_root)
+    folder.update_filmchen_and_locations(is_month=is_month_root)
 
     stored_files = store.list(folder.files)
     copy_to_nas(stored_files)
-    copy_to_dropbox(stored_files)
+    if args.dropbox:
+        copy_to_dropbox(stored_files)
     print(f"Added from {directory} : {len(stored_files)}")
     return len(stored_files)
 
@@ -81,8 +84,10 @@ if __name__ == '__main__':
     Duplicates in the same dir are not stored, but duplicates in named directories outside of month are.""")
     parser.add_argument('basedir', type=str, help='Base directory of old catalog.')
     parser.add_argument('year', type=str, help='Year to import.')
+    parser.add_argument('--dropbox', action='store_true', help='Also create the dropbox copy. Defaults to FALSE')
     parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
     parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
+    parser.add_argument('--month', type=str, help='Only catalog the given month.')
     default_args.default_arguments(parser)
     args = parser.parse_args()
 
@@ -104,7 +109,7 @@ if __name__ == '__main__':
 
     dbox_root = config['dropbox_root']
     if args.dropbox_root:
-        dest_root = args.dropbox_root
+        dbox_root = args.dropbox_root
 
     ignored_dirs = ["_gsdata_"]
     connection = elastic.Connection(args.host, args.port)

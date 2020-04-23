@@ -11,7 +11,11 @@ class EntryException(LookupError):
 
 
 class Entry:
+    """Base class object for the Catalog Entry. Contains all members and helper functions
+    that are stored in elastic as well as helper methods to be used in all tools.
 
+    The catalog entries in Elastic contain only a subset, see the :class:`Constants` for details which ones.
+    Also there you see the mappings defined for Elastic."""
     def __repr__(self):
         return "Entry"
 
