@@ -1,5 +1,5 @@
 class Constants:
-    attributes = ("name", "path", "dropbox_path", "catalog", "size", "modified", "hash", "path_hash",
+    attributes = ("name", "path", "dropbox", "nas", "size", "modified", "hash", "path_hash",
                   "type", "checksum", "captured", "location", "dimensions", "duration", "kind")
     leave_out_when_reading_from_elastic = ("name", "path", "type", "hash", "path_hash", "kind", "meta")
     date_keys = ("modified", "captured")
@@ -28,8 +28,8 @@ class Constants:
                                  "ignore_above": 256
                              }
                          }},
-                "dropbox_path": {"type": "boolean"},
-                "catalog": {"type": "boolean"},
+                "dropbox": {"type": "boolean"},
+                "nas": {"type": "boolean"},
                 "size": {"type": "integer"},
                 "duration": {"type": "integer"},
                 "captured": {"type": "date"},
@@ -73,9 +73,9 @@ class TestConstants:
     duration = [11, 21]
 
     captured_test = 1487456138000
-    captured_test_str = "2017-02-18 23-15-38"
+    captured_test_str = "2017-02-18 22-15-38"
     modified_test = 1587456138000
-    modified_test_str = "2020-04-21 09-02-18"
+    modified_test_str = "2020-04-21 08-02-18"
 
 
 def get_months() -> list:

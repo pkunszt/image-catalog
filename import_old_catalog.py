@@ -44,19 +44,20 @@ def read_and_store_directory(directory: str, dest_path: str, keep_names: bool) -
     folder.save_paths()
     folder.update_filmchen_and_locations()
     folder.update_names(destination_folder=dest_path,
-                        catalog_entry=True,
+                        nas=True,
+                        dropbox=True,
                         name_from_captured_date=True,
                         name_from_modified_date=False,
                         keep_manual_names=True)
 
     stored_files = store.list(folder.files)
-    copy_to_nas_catalog(stored_files)
-    copy_to_dropbox_catalog(stored_files)
+    copy_to_nas(stored_files)
+    copy_to_dropbox(stored_files)
     print(f"Added from {directory} : {len(stored_files)}")
     return len(stored_files)
 
 
-def copy_to_nas_catalog(stored_items):
+def copy_to_nas(stored_items):
     for item in stored_items:
         source = item.original_path
         dest_path = os.path.join(dest_root, item.path)
@@ -66,7 +67,7 @@ def copy_to_nas_catalog(stored_items):
         shutil.copy2(source, dest)
 
 
-def copy_to_dropbox_catalog(stored_items):
+def copy_to_dropbox(stored_items):
     for item in stored_items:
         source = item.original_path
         dest_path = os.path.join(dbox_root, item.path)

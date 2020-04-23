@@ -1,6 +1,7 @@
 from unittest import TestCase
 import os
 from constants import TestConstants
+from data import Image
 from data.directory import Folder
 
 
@@ -31,3 +32,71 @@ class TestFolder(TestCase):
 
         self.assertRaises(NotADirectoryError, test_directory.read, "blah")
         self.assertRaises(NotADirectoryError, test_directory.read, "./test_directory.py")
+
+    def test_set_name(self):
+        image = Image()
+        image.full_path = "/some/path/name is a string.jpg"
+        image.size = 1234
+        image.modified = TestConstants.modified_test
+        self.assertEqual(image.modified_time_str, TestConstants.modified_test_str)
+
+        # Test that an image without captured date retains its name if we want to change only by captured date
+        doc = image.name
+        Folder.set_name(image, name_from_captured_date=True,
+                        name_from_modified_date=False,
+                        keep_manual_names=False)
+        self.assertEqual(doc, image.name)
+
+        # An image without captured date but with modified date changes name if we want to change by mod date
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=True,
+                        keep_manual_names=False)
+        self.assertEqual(image.name, TestConstants.modified_test_str + '@' + doc)
+
+        image.name = doc
+        # If the image has a meaningful name, modified date is not prepended if we want to keep manual names
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=True,
+                        keep_manual_names=True)
+        self.assertEqual(doc, image.name)
+
+        # If image has no meaningful name, then modified time IS prepended also if we want to keep manual names
+        image.name = doc = "IMG324342.jpg"
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=True,
+                        keep_manual_names=True)
+        self.assertEqual(image.name, TestConstants.modified_test_str + '@' + doc)
+
+        image.name = doc = "name is a string.jpg"
+        # add now captured date
+        image.captured = TestConstants.captured_test
+        self.assertEqual(image.captured_str, TestConstants.captured_test_str)
+
+        # if we have a captured date and want to change by it, the whole name is changed
+        Folder.set_name(image, name_from_captured_date=True,
+                        name_from_modified_date=False,
+                        keep_manual_names=False)
+        self.assertEqual(image.name, TestConstants.captured_test_str + '.' + image.type)
+
+        # if we want to change by modified name, but we do have captured date, also then captured date is set
+        image.name = doc
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=True,
+                        keep_manual_names=False)
+        self.assertEqual(image.name, TestConstants.captured_test_str + '.' + image.type)
+
+        # if we have some meaningful name, and want to keep it, the captured date is appended to it
+        name, ext = os.path.splitext(doc)
+        image.name = doc
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=False,
+                        keep_manual_names=True)
+        self.assertEqual(image.name, name + ' ' + TestConstants.captured_test_str + ext)
+
+        # if the name is not meaningful, replace it with the captured date even if not asked for
+        image.name = doc = "IMG324342.jpg"
+        name, ext = os.path.splitext(doc)
+        Folder.set_name(image, name_from_captured_date=False,
+                        name_from_modified_date=False,
+                        keep_manual_names=True)
+        self.assertEqual(image.name, TestConstants.captured_test_str + ext)

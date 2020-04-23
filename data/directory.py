@@ -116,14 +116,16 @@ class Folder:
 
     def update_names(self,
                      destination_folder: str = "",
-                     catalog_entry: bool = False,
+                     nas: bool = False,
+                     dropbox: bool = False,
                      name_from_captured_date: bool = False,
                      name_from_modified_date: bool = False,
                      keep_manual_names: bool = False) -> None:
         for entry in self.file_list:
             Folder.set_name(entry,
                             destination_folder=destination_folder,
-                            catalog_entry=catalog_entry,
+                            nas=nas,
+                            dropbox=dropbox,
                             name_from_captured_date=name_from_captured_date,
                             name_from_modified_date=name_from_modified_date,
                             keep_manual_names=keep_manual_names)
@@ -131,15 +133,18 @@ class Folder:
     @staticmethod
     def set_name(entry,
                  destination_folder: str = "",
-                 catalog_entry: bool = False,
+                 nas: bool = False,
+                 dropbox: bool = False,
                  name_from_captured_date: bool = False,
                  name_from_modified_date: bool = False,
                  keep_manual_names: bool = False) -> None:
 
         if destination_folder:
             entry.path = destination_folder
-        if catalog_entry:
-            entry.catalog = catalog_entry
+        if nas:
+            entry.nas = True
+        if dropbox:
+            entry.dropbox = True
 
         name, ext = os.path.splitext(entry.name)
         if name_from_modified_date and hasattr(entry, "modified"):
@@ -157,9 +162,10 @@ class Folder:
                 if ('A' <= c <= 'z') or c == ' '
             ])
             if len(chars_only)/len(name) > 0.5:
+                entry.name = name + ext.lower()   # keep original, even if we had modified it above
                 if hasattr(entry, "captured"):
                     # but append the captured time to the text if there is one
-                    entry.name += name + ' ' + entry.captured_str + ext.lower()
+                    entry.name = name + ' ' + entry.captured_str + ext.lower()
             elif hasattr(entry, "captured"):
                 entry.name = entry.captured_str + ext.lower()
 
