@@ -20,6 +20,7 @@ class Store:
     __index: str
     __path_hashes: set
     __name_hashes: set
+    __not_stored_count: int
 
     def __init__(self, connection: Connection, allow_duplicates: bool = False):
         self.__elastic = connection.get()
@@ -27,6 +28,7 @@ class Store:
         self.__allow_duplicates = allow_duplicates
         self.__path_hashes = set()
         self.__name_hashes = set()
+        self.__not_stored_count = 0
 
     @property
     def allow_duplicates(self) -> bool:
@@ -48,19 +50,21 @@ class Store:
         stored = []
         self.__path_hashes.clear()
         self.__name_hashes.clear()
+        self.__not_stored_count = 0
         for e in entries:
             if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND, Constants.OTHER_KIND):
                 raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
 
-            hits = 0
+            if e.check_if_in_catalog and self.has_checksum(e.checksum):
+                # a file with this checksum has already been uploaded into the catalog.
+                self.__not_stored_count += 1
+                continue
             if not self.allow_duplicates:
                 # don't store if we have this already in our list of hashes we already stored. path_hash = path+checksum
                 if e.path_hash in self.__path_hashes:
+                    self.__not_stored_count += 1
                     continue
-                s = Search(using=self.elastic, index=self.index).filter('term', path_hash=e.path_hash)
-                result = s.execute()
-                hits = len(result.hits)
-            if self.allow_duplicates or hits == 0:
+            if self.allow_duplicates or not self.has_hash(e.path_hash):
                 # avoid same name
                 self.get_name(e)
                 try:
@@ -69,12 +73,27 @@ class Store:
                     print("------------- Failed to store:-------------")
                     print(e.to_dict())
                     print(err)
+                    self.__not_stored_count += 1
                 else:
                     if not self.allow_duplicates:
                         self.__path_hashes.add(e.path_hash)
                         self.__name_hashes.add(e.hash)
                     stored.append(e)
+            else:
+                self.__not_stored_count += 1
         return stored
+
+    def has_hash(self, hash) -> bool:
+        s = Search(using=self.elastic, index=self.index).filter('term', path_hash=hash)
+        result = s.execute()
+        hits = len(result.hits)
+        return hits > 0
+
+    def has_checksum(self, checksum) -> bool:
+        s = Search(using=self.elastic, index=self.index).filter('term', checksum=checksum)
+        result = s.execute()
+        hits = len(result.hits)
+        return hits > 0
 
     def get_name(self, entry):
         """If a file with the same name already exists, append a '_n' to the name to enumerate through"""
@@ -100,3 +119,7 @@ class Store:
 
     def update(self, change, _id: str):
         self.elastic.update(index=self.index, id=_id, body={'doc': change})
+
+    @property
+    def not_stored(self):
+        return self.__not_stored_count

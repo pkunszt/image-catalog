@@ -151,7 +151,8 @@ class Factory:
         for line in lines:
             if line.find("Duration") > 0:
                 d = Factory._duration.match(line)
-                video.duration = int(d.group('hour'))*3600 + int(d.group('min'))*60 + int(d.group('sec'))
+                if d:
+                    video.duration = int(d.group('hour'))*3600 + int(d.group('min'))*60 + int(d.group('sec'))
             if line.find("creation_time") > 0:
                 try:
                     video.captured = datetime.strptime(line[line.find(':')+2:],

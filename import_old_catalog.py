@@ -1,15 +1,10 @@
-import json
 import os
-import pathlib
-import shutil
 import sys
 import re
 import argparse
-import elastic
-import data
 import default_args
 import constants
-from data import DBox
+from catalog_files import CatalogFiles
 
 
 def walk_year(directory_name: str, dest_path: str) -> int:
@@ -21,60 +16,11 @@ def walk_year(directory_name: str, dest_path: str) -> int:
                 if args.month and item.name != args.month:
                     continue
                 if item.name in months:
-                    count += catalog_dir(item.path, os.path.join(dest_path, item.name), is_month_root=True)
+                    count += cat_folder.import_old_dir(item.path, os.path.join(dest_path, item.name), is_month=True)
                 else:
-                    count += catalog_dir(item.path, os.path.join(dest_path, item.name))
+                    count += cat_folder.import_old_dir(item.path, os.path.join(dest_path, item.name))
 
     return count
-
-
-def catalog_dir(directory: str, dest_path: str, is_month_root: bool = False) -> int:
-    count = 0
-    if directory in ignored_dirs:
-        return 0
-    with os.scandir(directory) as iterator:
-        for item in iterator:
-            if item.is_dir():
-                count += catalog_dir(item.path, os.path.join(dest_path, item.name))
-
-    return read_and_store_directory(directory, dest_path, is_month_root) + count
-
-
-def read_and_store_directory(directory: str, dest_path: str, is_month_root: bool) -> int:
-    folder.read(directory)
-    folder.drop_duplicates()
-    folder.save_paths()
-    folder.update_names(destination_folder=dest_path,
-                        nas=True,
-                        dropbox=args.dropbox,
-                        name_from_captured_date=True,
-                        name_from_modified_date=False,
-                        keep_manual_names=not is_month_root)
-    folder.update_filmchen_and_locations(is_month=is_month_root)
-
-    stored_files = store.list(folder.files)
-    copy_to_nas(stored_files)
-    if args.dropbox:
-        copy_to_dropbox(stored_files)
-    print(f"Added from {directory} : {len(stored_files)}")
-    return len(stored_files)
-
-
-def copy_to_nas(stored_items):
-    for item in stored_items:
-        source = item.original_path
-        dest_path = os.path.join(dest_root, item.path)
-        dest = os.path.join(dest_path, item.name)
-        if not os.path.exists(dest_path):
-            pathlib.Path(dest_path).mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, dest)
-
-
-def copy_to_dropbox(stored_items):
-    for item in stored_items:
-        source = item.original_path
-        dest_path = os.path.join(dbox_root, item.path)
-        dbox.put_file(source, item.size, dest_path, item.name, item.modified_ts)
 
 
 if __name__ == '__main__':
@@ -101,24 +47,16 @@ if __name__ == '__main__':
         print(f"Invalid directory {import_path}")
         sys.exit(-1)
 
-    with open("config.json", 'r') as file:
-        config = json.load(file)
-    dest_root = config['nas_root']
-    if args.nas_root:
-        dest_root = args.nas_root
-
-    dbox_root = config['dropbox_root']
-    if args.dropbox_root:
-        dbox_root = args.dropbox_root
-
-    ignored_dirs = ["_gsdata_"]
-    connection = elastic.Connection(args.host, args.port)
+    index = ""
     if args.index:
-        connection.index = args.index
-    store = elastic.Store(connection)
+        index = args.index
 
-    folder = data.Folder()
-    dbox = DBox(True)
+    cat_folder = CatalogFiles(args.host, args.port, index=index, dropbox=args.dropbox)
+    if args.nas_root:
+        cat_folder.nas_root = args.nas_root
+    if args.dropbox_root:
+        cat_folder.dropbox_root = args.dropbox_root
+
     c = walk_year(import_path, args.year)
 
     print(f"Added {c} entries to catalog.")

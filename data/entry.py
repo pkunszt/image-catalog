@@ -33,6 +33,7 @@ class Entry:
     _dimensions: str
     _duration: int
     _original_path: str
+    _check_if_in_catalog: bool
 
     date_time_format: str = "%Y-%m-%d %H-%M-%S"
 
@@ -51,6 +52,10 @@ class Entry:
     @property
     def nas(self):
         return self._nas if hasattr(self, "_nas") else False
+
+    @property
+    def check_if_in_catalog(self):
+        return self._check_if_in_catalog if hasattr(self, "_check_if_in_catalog") else False
 
     @property
     def full_path(self):
@@ -82,6 +87,16 @@ class Entry:
             .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
 
     @property
+    def captured_year(self):
+        return datetime.datetime.utcfromtimestamp(self.captured / 1000.0) \
+            .strftime("%Y")
+
+    @property
+    def captured_month(self):
+        return datetime.datetime.utcfromtimestamp(self.captured / 1000.0) \
+            .strftime("%m_%B")
+
+    @property
     def modified_str(self):
         return datetime.datetime.utcfromtimestamp(self.modified / 1000.0).isoformat()
 
@@ -89,6 +104,16 @@ class Entry:
     def modified_time_str(self):
         return datetime.datetime.utcfromtimestamp(self.modified / 1000.0) \
             .strftime(Entry.date_time_format)  # , tz=datetime.timezone(datetime.timedelta(hours=1))
+
+    @property
+    def modified_year(self):
+        return datetime.datetime.utcfromtimestamp(self.modified / 1000.0) \
+            .strftime("%Y")
+
+    @property
+    def modified_month(self):
+        return datetime.datetime.utcfromtimestamp(self.modified / 1000.0) \
+            .strftime("%m_%B")
 
     @property
     def modified_ts(self):
@@ -158,6 +183,10 @@ class Entry:
     def nas(self, flag: bool):
         self._nas = flag
 
+    @check_if_in_catalog.setter
+    def check_if_in_catalog(self, flag: bool):
+        self._check_if_in_catalog = flag
+
     @full_path.setter
     def full_path(self, full_path):
         self.path, self.name = os.path.split(full_path)
@@ -201,3 +230,9 @@ class Entry:
         for attr, value in data.items():
             setattr(self, attr, value)
         return self
+
+    def set_path_from_captured_time(self):
+        self.path = os.path.join(self.captured_year, self.captured_month)
+
+    def set_path_from_modified_time(self):
+        self.path = os.path.join(self.modified_year, self.modified_month)

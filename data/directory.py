@@ -1,7 +1,10 @@
 import os
+import re
 from typing import List, Generator
 import reverse_geocoder
 import geopy
+
+import constants
 from constants import Constants
 from data.factory import Factory, FactoryError
 from data.entry import Entry
@@ -13,11 +16,17 @@ class Folder:
     __invalid_types_found: set
     __valid_types_found: set
     geo: geopy.geocoders.osm.Nominatim = geopy.geocoders.Nominatim(user_agent="my_catalog")
+    __name_date: re.Pattern
+    __name_date2: re.Pattern
 
     def __init__(self):
         self.__file_list = []
         self.__invalid_types_found = set()
         self.__valid_types_found = set()
+        if not type(self).__name_date:
+            __name_date = re.compile('.*(?P<year>2[0-2]\d\d)(?P<mon>[0-1]\d)(?P<day>[0-3]\d).*')
+        if not type(self).__name_date2:
+            __name_date2 = re.compile('.*(?P<year>2[0-2]\d\d)-(?P<mon>[0-1]\d)-(?P<day>[0-3]\d).*')
 
     def read(self, directory_name: str) -> None:
         """Read from a given directory all image and video files.
@@ -87,10 +96,11 @@ class Folder:
                 for to_delete in item[1:]:
                     self.__file_list.remove(to_delete)
 
-    def save_paths(self):
+    def save_paths(self, check: bool = False):
         """Call the save_path method of :class:`Entry` for each entry in our file list."""
         for entry in self.file_list:
             entry.save_path()
+            entry.check_if_in_catalog = check
 
     def update_filmchen_and_locations(self, is_month: bool = False):
         """In the given list 'move' the movies into 'filmchen' folder and if items have locations
@@ -127,52 +137,90 @@ class Folder:
                             destination_folder=destination_folder,
                             nas=nas,
                             dropbox=dropbox,
-                            name_from_captured_date=name_from_captured_date,
                             name_from_modified_date=name_from_modified_date,
                             keep_manual_names=keep_manual_names)
 
     @staticmethod
-    def set_name(entry,
+    def set_name(entry: Entry,
                  destination_folder: str = "",
                  nas: bool = False,
                  dropbox: bool = False,
-                 name_from_captured_date: bool = False,
                  name_from_modified_date: bool = False,
                  keep_manual_names: bool = False) -> None:
-        """ Set the name for a file based on the following criteria:
+        """ Set the name and path for a file based on the following criteria:
 
+        Path: if the destination_folder parameter is not empty, use that as the path. If it is empty, assemble the path
+        from the captured date (YYYY/MM_MonthName) or if the captured date is not set, from the modified time date.
+        Sometimes the filename itself contains a string YYYYMMDD somewhere in the middle (true for Whatsapp images),
+        if that pattern is found, set the path accordingly. The name is kept as is.
+        However, if the date does not come from the captured time, check that the file has not already been catalogued
+        somewhere else and moved there manually. So if the catalog contains the same checksum already, the file is
+        skipped.
+
+        Name:
         If the name_from_captured_date is True, and the entry has the captured time, use that to set the file name.
-
         If the name_from_modified_date is True, and it does have the captured_date, then again the captured date is set.
+        Otherwise the modified date is set, prepended to the previous name (with an @ in between).
+        There is also a keep_manual_names flag, if set, we simply keep the name if it seems to be mostly characters,
+        not digits, because that seems like a human set the name manually.
          """
 
-        if destination_folder:
-            entry.path = destination_folder
         if nas:
             entry.nas = True
         if dropbox:
             entry.dropbox = True
 
-        name, ext = os.path.splitext(entry.name)
-        if name_from_modified_date and hasattr(entry, "modified"):
-            # modification time is only informative so much. Sometimes more info may be extracted later from
-            # the original name, so append / keep it.
-            entry.name = entry.modified_time_str + '@' + name + ext.lower()
-        if (name_from_captured_date or name_from_modified_date) and hasattr(entry, "captured"):
-            # if there is a captured date/time, use that, also for modification given
-            entry.name = entry.captured_str + ext.lower()
-        if keep_manual_names:
-            # if there is significant text in the name already, keep that text, ignore numerals
-            chars_only = "".join([
-                c
-                for c in name
-                if ('A' <= c <= 'z') or c == ' '
-            ])
-            if len(chars_only)/len(name) > 0.5:
-                entry.name = name + ext.lower()   # keep original, even if we had modified it above
-                if hasattr(entry, "captured"):
-                    # but append the captured time to the text if there is one
-                    entry.name = name + ' ' + entry.captured_str + ext.lower()
-            elif hasattr(entry, "captured"):
-                entry.name = entry.captured_str + ext.lower()
+        # set folder
+        if destination_folder:
+            entry.path = destination_folder
+        else:
+            if hasattr(entry, "captured"):
+                entry.set_path_from_captured_time()
+            else:
+                entry.check_if_in_catalog = True
+                path = Folder.path_from_name(entry.name)
+                if path:
+                    entry.path = path
+                    return    # do not modify the name if we got the path from it
+                entry.set_path_from_modified_time()
 
+        # set name
+        name, ext = os.path.splitext(entry.name)
+        entry.name = name + ext.lower()
+        if keep_manual_names and Folder.is_probably_text(name):
+            # if there is significant text in the name already, keep that text, ignore numerals
+            if hasattr(entry, "captured"):
+                # but append the captured time to the text if there is one
+                entry.name = name + ' ' + entry.captured_str + ext.lower()
+            return
+        if hasattr(entry, "captured"):
+            # if there is a captured date/time, use that, always
+            entry.name = entry.captured_str + ext.lower()
+        elif name_from_modified_date:
+            # Prepend the modification date if explicitly requested
+            entry.name = entry.modified_time_str + ' @ ' + name + ext.lower()
+
+    @staticmethod
+    def is_probably_text(name):
+        chars_only = "".join([
+            c
+            for c in name
+            if ('A' <= c <= 'z') or c == ' '
+        ])
+        return len(chars_only) / len(name) > 0.5
+
+    @staticmethod
+    def path_from_name(name) -> str:
+        n1 = Folder.__name_date.match(name)
+        if n1:
+            year = n1.group('year')
+            month = n1.group('month')
+            return os.path.join(year, constants.get_month_by_number(month))
+
+        n2 = Folder.__name_date2.match(name)
+        if n2:
+            year = n2.group('year')
+            month = n2.group('month')
+            return os.path.join(year, constants.get_month_by_number(month))
+
+        return ""

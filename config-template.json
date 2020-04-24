@@ -1,0 +1,6 @@
+{
+  "dbox_catalog_token": "token giving access to dropbox catalog directory",
+  "dbox_full_token": "token giving access to full dropbox.",
+  "dropbox_root": "/path/to/catalog",
+  "nas_root": "/path/to/catalog"
+}

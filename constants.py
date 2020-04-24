@@ -85,3 +85,9 @@ def get_months() -> list:
         f"{k:02}_{v}"
         for k, v in enumerate(mon, 1)
     ]
+
+
+def get_month_by_number(num: str):
+    for mon in get_months():
+        if mon.startswith(num):
+            return mon
