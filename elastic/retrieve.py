@@ -60,10 +60,18 @@ class Retrieve:
                 yield path.key
             i = i + 1
 
-    def on_nas_but_not_on_dropbox(self):
-        s = Search(using=self.elastic, index=self.index)
-        s = s.filter('term', nas=True)
-        s = s.filter('term', dropbox=False)
+    def on_nas_but_not_on_dropbox(self, limit: int = 0):
+        s = Search.from_dict({
+            "query": {
+                "bool": {
+                    "must_not": {"exists": {"field": "dropbox"}},
+                    "filter": {"term": {"nas": "true"}}
+                    }
+                }
+            })
+        s = s.using(self.elastic).index(self.index)
+        if limit:
+            s = s[:limit]
         result = s.execute()
         for e in result.hits:
             yield Factory.from_elastic_entry(e)

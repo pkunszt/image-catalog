@@ -123,3 +123,6 @@ class CatalogFiles:
         source = item.original_path
         dest_path = os.path.join(self.dropbox_root, item.path)
         self._dbox.put_file(source, item.size, dest_path, item.name, item.modified_ts)
+
+    def update(self, change, _id):
+        self._store.update(change, _id)
