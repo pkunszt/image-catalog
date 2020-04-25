@@ -60,7 +60,8 @@ class Constants:
                      lon="GPS GPSLongitude"
                      )
 
-    known_locations = {'Riederalp', 'Le Lignon', 'Zürich', 'Winterthur', 'Los Angeles', 'Barcelona'}
+    known_locations = {'Riederalp', 'Le Lignon', 'Zürich', 'Winterthur', 'Los Angeles', 'Barcelona',
+                       'Zuerich', 'Duebendorf', 'Geneve'}
 
 
 class TestConstants:

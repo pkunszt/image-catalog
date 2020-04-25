@@ -1,3 +1,4 @@
+from data import Factory
 from elastic.connection import Connection
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import Search, A
@@ -58,3 +59,11 @@ class Retrieve:
             for path in result.aggregations.paths.buckets:
                 yield path.key
             i = i + 1
+
+    def on_nas_but_not_on_dropbox(self):
+        s = Search(using=self.elastic, index=self.index)
+        s = s.filter('term', nas=True)
+        s = s.filter('term', dropbox=False)
+        result = s.execute()
+        for e in result.hits:
+            yield Factory.from_elastic_entry(e)

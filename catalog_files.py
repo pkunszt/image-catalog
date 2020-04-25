@@ -12,10 +12,10 @@ class CatalogFiles:
     def __init__(self, host: str, port: int, index: str = "", dropbox: bool = False):
         self._folder = data.Folder()
         self._dropbox = dropbox
-        connection = elastic.Connection(host, port)
+        self._connection = elastic.Connection(host, port)
         if index:
-            connection.index = index
-        self._store = elastic.Store(connection)
+            self._connection.index = index
+        self._store = elastic.Store(self._connection)
         self._dbox = data.DBox(True)
 
         with open("config.json", 'r') as file:
@@ -38,6 +38,10 @@ class CatalogFiles:
     @dropbox_root.setter
     def dropbox_root(self, name):
         self._dropbox_root = name
+
+    @property
+    def connection(self):
+        return self._connection
 
     def catalog_dir(self, directory: str, recurse: bool = False) -> int:
         count = 0
@@ -113,6 +117,9 @@ class CatalogFiles:
 
     def copy_to_dropbox(self, stored_items):
         for item in stored_items:
-            source = item.original_path
-            dest_path = os.path.join(self.dropbox_root, item.path)
-            self._dbox.put_file(source, item.size, dest_path, item.name, item.modified_ts)
+            self.copy_item_to_dropbox(item)
+
+    def copy_item_to_dropbox(self, item):
+        source = item.original_path
+        dest_path = os.path.join(self.dropbox_root, item.path)
+        self._dbox.put_file(source, item.size, dest_path, item.name, item.modified_ts)

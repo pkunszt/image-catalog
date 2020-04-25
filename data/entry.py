@@ -236,3 +236,6 @@ class Entry:
 
     def set_path_from_modified_time(self):
         self.path = os.path.join(self.modified_year, self.modified_month)
+
+    def set_original_path_on_nas(self, nas_root):
+        self._original_path = os.path.join(nas_root, self.path)

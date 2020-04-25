@@ -106,19 +106,34 @@ class Folder:
         for entry in self.file_list:
             if entry.location:
                 lat, lon = entry.location.split(',')
-                default_name = reverse_geocoder.search([(float(lat), float(lon))])[0]['name']
+                default_name = Folder.clean_name(reverse_geocoder.search([(float(lat), float(lon))])[0]['name'])
                 alt_names = Folder.geo.reverse(entry.location).address.split(', ')
 
                 name, ext = os.path.splitext(entry.name)
+                known_name = ""
                 if len(alt_names) > 4:
-                    if alt_names[-5] in Constants.known_locations:
-                        entry.name = name + ' ' + alt_names[-5] + ext
-                        continue
-                if len(alt_names) > 5:
-                    if alt_names[-6] in Constants.known_locations:
-                        entry.name = name + ' ' + alt_names[-6] + ext
-                        continue
+                    known_name = Folder.get_known_name(alt_names[-5])
+                if not known_name and len(alt_names) > 5:
+                    known_name = Folder.get_known_name(alt_names[-6])
+                if known_name:
+                    entry.name = name + ' ' + known_name + ext
+
                 entry.name = name + ' ' + default_name + ext
+
+    @staticmethod
+    def clean_name(name: str) -> str:
+        if '/' in name:
+            name = name.replace('/', '-')
+        if '\\' in name:
+            name = name.replace('\\', '-')
+        return name
+
+    @staticmethod
+    def get_known_name(name: str) -> str:
+        for n in Constants.known_locations:
+            if name.startswith(n):
+                return n
+        return ""
 
     def update_video_path(self):
         """In the given list 'move' the movies into 'filmchen' folder """
