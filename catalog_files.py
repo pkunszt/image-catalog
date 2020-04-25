@@ -77,7 +77,8 @@ class CatalogFiles:
                                   dropbox=self._dropbox,
                                   name_from_modified_date=True,
                                   keep_manual_names=False)
-        self._folder.update_filmchen_and_locations()
+        self._folder.update_video_path()
+        self._folder.update_name_from_location()
 
         return self.do_copy()
 
@@ -87,7 +88,9 @@ class CatalogFiles:
                                   dropbox=self._dropbox,
                                   name_from_modified_date=False,
                                   keep_manual_names=not is_month_path)
-        self._folder.update_filmchen_and_locations(is_month=is_month_path)
+        if is_month_path:
+            self._folder.update_video_path()
+        self._folder.update_name_from_location()
 
         return self.do_copy()
 

@@ -23,10 +23,9 @@ class Folder:
         self.__file_list = []
         self.__invalid_types_found = set()
         self.__valid_types_found = set()
-        if not type(self).__name_date:
-            __name_date = re.compile('.*(?P<year>2[0-2]\d\d)(?P<mon>[0-1]\d)(?P<day>[0-3]\d).*')
-        if not type(self).__name_date2:
-            __name_date2 = re.compile('.*(?P<year>2[0-2]\d\d)-(?P<mon>[0-1]\d)-(?P<day>[0-3]\d).*')
+        if not hasattr(type(self), "__name_date"):
+            type(self).__name_date = re.compile('.*(?P<year>2[0-2]\d\d)(?P<mon>[0-1]\d)(?P<day>[0-3]\d).*')
+            type(self).__name_date2 = re.compile('.*(?P<year>2[0-2]\d\d)-(?P<mon>[0-1]\d)-(?P<day>[0-3]\d).*')
 
     def read(self, directory_name: str) -> None:
         """Read from a given directory all image and video files.
@@ -102,12 +101,9 @@ class Folder:
             entry.save_path()
             entry.check_if_in_catalog = check
 
-    def update_filmchen_and_locations(self, is_month: bool = False):
-        """In the given list 'move' the movies into 'filmchen' folder and if items have locations
-        then resolve the city and append the location city to the filename"""
+    def update_name_from_location(self):
+        """In the given list resolve the city and append the location city to the filename"""
         for entry in self.file_list:
-            if is_month and entry.kind == Constants.VIDEO_KIND and not entry.path.endswith('filmchen'):
-                entry.path = os.path.join(entry.path, 'filmchen')
             if entry.location:
                 lat, lon = entry.location.split(',')
                 default_name = reverse_geocoder.search([(float(lat), float(lon))])[0]['name']
@@ -123,6 +119,13 @@ class Folder:
                         entry.name = name + ' ' + alt_names[-6] + ext
                         continue
                 entry.name = name + ' ' + default_name + ext
+
+    def update_video_path(self):
+        """In the given list 'move' the movies into 'filmchen' folder """
+        for entry in self.file_list:
+            if entry.kind == Constants.VIDEO_KIND and not entry.path.endswith('filmchen'):
+                entry.path = os.path.join(entry.path, 'filmchen')
+
 
     def update_names(self,
                      destination_folder: str = "",
@@ -180,7 +183,7 @@ class Folder:
                 entry.check_if_in_catalog = True
                 path = Folder.path_from_name(entry.name)
                 if path:
-                    entry.path = path
+                    entry.path = os.path.join(path, "Whatsapp")
                     return    # do not modify the name if we got the path from it
                 entry.set_path_from_modified_time()
 
@@ -214,13 +217,13 @@ class Folder:
         n1 = Folder.__name_date.match(name)
         if n1:
             year = n1.group('year')
-            month = n1.group('month')
+            month = n1.group('mon')
             return os.path.join(year, constants.get_month_by_number(month))
 
         n2 = Folder.__name_date2.match(name)
         if n2:
             year = n2.group('year')
-            month = n2.group('month')
+            month = n2.group('mon')
             return os.path.join(year, constants.get_month_by_number(month))
 
         return ""
