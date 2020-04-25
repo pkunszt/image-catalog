@@ -126,14 +126,13 @@ class Folder:
             if entry.kind == Constants.VIDEO_KIND and not entry.path.endswith('filmchen'):
                 entry.path = os.path.join(entry.path, 'filmchen')
 
-
     def update_names(self,
                      destination_folder: str = "",
                      nas: bool = False,
                      dropbox: bool = False,
-                     name_from_captured_date: bool = False,
                      name_from_modified_date: bool = False,
-                     keep_manual_names: bool = False) -> None:
+                     keep_manual_names: bool = False,
+                     is_month: bool = False) -> None:
         """Call set_name for every name. See set_name."""
         for entry in self.file_list:
             Folder.set_name(entry,
@@ -141,7 +140,8 @@ class Folder:
                             nas=nas,
                             dropbox=dropbox,
                             name_from_modified_date=name_from_modified_date,
-                            keep_manual_names=keep_manual_names)
+                            keep_manual_names=keep_manual_names,
+                            is_month=is_month)
 
     @staticmethod
     def set_name(entry: Entry,
@@ -149,7 +149,8 @@ class Folder:
                  nas: bool = False,
                  dropbox: bool = False,
                  name_from_modified_date: bool = False,
-                 keep_manual_names: bool = False) -> None:
+                 keep_manual_names: bool = False,
+                 is_month: bool = False) -> None:
         """ Set the name and path for a file based on the following criteria:
 
         Path: if the destination_folder parameter is not empty, use that as the path. If it is empty, assemble the path
@@ -174,18 +175,10 @@ class Folder:
             entry.dropbox = True
 
         # set folder
-        if destination_folder:
+        if destination_folder and not is_month:
             entry.path = destination_folder
         else:
-            if hasattr(entry, "captured"):
-                entry.set_path_from_captured_time()
-            else:
-                entry.check_if_in_catalog = True
-                path = Folder.path_from_name(entry.name)
-                if path:
-                    entry.path = os.path.join(path, "Whatsapp")
-                    return    # do not modify the name if we got the path from it
-                entry.set_path_from_modified_time()
+            Folder.set_path_from_name(entry)
 
         # set name
         name, ext = os.path.splitext(entry.name)
@@ -227,3 +220,15 @@ class Folder:
             return os.path.join(year, constants.get_month_by_number(month))
 
         return ""
+
+    @staticmethod
+    def set_path_from_name(entry):
+        if hasattr(entry, "captured"):
+            entry.set_path_from_captured_time()
+        else:
+            entry.check_if_in_catalog = True
+            path = Folder.path_from_name(entry.name)
+            if path:
+                entry.path = os.path.join(path, "Whatsapp")
+                return  # do not modify the name if we got the path from it
+            entry.set_path_from_modified_time()

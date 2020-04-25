@@ -62,7 +62,7 @@ class CatalogFiles:
                 if item.is_dir():
                     count += self.import_old_dir(item.path, os.path.join(dest_path, item.name))
 
-        self.get_files(directory)
+        self.get_files(directory, check=is_month)
         count += self.read_and_import_directory(dest_path, is_month)
         print(f"Imported from {directory} : {count}   / Not stored: {self._store.not_stored}")
         return count
@@ -87,7 +87,8 @@ class CatalogFiles:
                                   nas=True,
                                   dropbox=self._dropbox,
                                   name_from_modified_date=False,
-                                  keep_manual_names=not is_month_path)
+                                  keep_manual_names=not is_month_path,
+                                  is_month=is_month_path)
         if is_month_path:
             self._folder.update_video_path()
         self._folder.update_name_from_location()
