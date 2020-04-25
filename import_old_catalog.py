@@ -29,7 +29,7 @@ if __name__ == '__main__':
     Starting from a YEAR we will traverse into the given months and subdirs are kept as such.
     Duplicates in the same dir are not stored, but duplicates in named directories outside of month are.""")
     parser.add_argument('basedir', type=str, help='Base directory of old catalog.')
-    parser.add_argument('year', type=str, help='Year to import.')
+    parser.add_argument('year', type=str, nargs='+', help='Year to import.')
     parser.add_argument('--dropbox', action='store_true', help='Also create the dropbox copy. Defaults to FALSE')
     parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
     parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
@@ -38,25 +38,27 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     year = re.compile("[1-2]\d\d\d")
-    if not year.match(args.year):
-        print("Year needs to be a 4 digit number")
-        sys.exit(-1)
 
-    import_path = os.path.join(args.basedir, args.year)
-    if not os.path.isdir(import_path):
-        print(f"Invalid directory {import_path}")
-        sys.exit(-1)
+    for y in args.year:
+        if not year.match(y):
+            print("Year needs to be a 4 digit number")
+            sys.exit(-1)
 
-    index = ""
-    if args.index:
-        index = args.index
+        import_path = os.path.join(args.basedir, y)
+        if not os.path.isdir(import_path):
+            print(f"Invalid directory {import_path}")
+            sys.exit(-1)
 
-    cat_folder = CatalogFiles(args.host, args.port, index=index, dropbox=args.dropbox)
-    if args.nas_root:
-        cat_folder.nas_root = args.nas_root
-    if args.dropbox_root:
-        cat_folder.dropbox_root = args.dropbox_root
+        index = ""
+        if args.index:
+            index = args.index
 
-    c = walk_year(import_path, args.year)
+        cat_folder = CatalogFiles(args.host, args.port, index=index, dropbox=args.dropbox)
+        if args.nas_root:
+            cat_folder.nas_root = args.nas_root
+        if args.dropbox_root:
+            cat_folder.dropbox_root = args.dropbox_root
 
-    print(f"Added {c} entries to catalog.")
+        c = walk_year(import_path, y)
+
+        print(f"Added {c} entries to catalog.")

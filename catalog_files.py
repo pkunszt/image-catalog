@@ -84,7 +84,7 @@ class CatalogFiles:
         self._folder.update_video_path()
         self._folder.update_name_from_location()
 
-        return self.do_copy()
+        return self.do_copy(print_dirs=True)
 
     def read_and_import_directory(self, dest_path: str, is_month_path: bool) -> int:
         self._folder.update_names(destination_folder=dest_path,
@@ -99,11 +99,13 @@ class CatalogFiles:
 
         return self.do_copy()
 
-    def do_copy(self):
+    def do_copy(self, print_dirs: bool = False):
         stored_files = self._store.list(self._folder.files)
         self.copy_to_nas(stored_files)
         if self._dropbox:
             self.copy_to_dropbox(stored_files)
+        if print_dirs:
+            self.print_target_dirs(stored_files)
         return len(stored_files)
 
     def copy_to_nas(self, stored_items):
@@ -126,3 +128,12 @@ class CatalogFiles:
 
     def update(self, change, _id):
         self._store.update(change, _id)
+
+    @staticmethod
+    def print_target_dirs(file_list):
+        dirs = dict()
+        for entry in file_list:
+            dirs.setdefault(entry.path, []) \
+                .append(0)
+        for item in sorted(list(dirs.keys())):
+            print(f"{item} : {len(dirs[item])}")
