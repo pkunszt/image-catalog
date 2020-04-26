@@ -3,6 +3,7 @@ import re
 from typing import List, Generator
 import reverse_geocoder
 import geopy
+import geopy.exc
 
 import constants
 from constants import Constants
@@ -107,7 +108,12 @@ class Folder:
             if entry.location:
                 lat, lon = entry.location.split(',')
                 default_city = Folder.clean_name(reverse_geocoder.search([(float(lat), float(lon))])[0]['name'])
-                alt_city = Folder.geo.reverse(entry.location).address.split(', ')
+                alt_city = []
+                try:
+                    alt_city = Folder.geo.reverse(entry.location, timeout=60).address.split(', ')
+                except geopy.exc.GeocoderTimedOut as e:
+                    print(f"Timeout on GeoLookup for {entry.location} of {entry.name}. Found {default_city} already.")
+                    raise FactoryError("Exiting.")
 
                 name, ext = os.path.splitext(entry.name)
                 known_city = ""

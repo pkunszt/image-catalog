@@ -28,6 +28,7 @@ class Store:
         self.__allow_duplicates = allow_duplicates
         self.__path_hashes = set()
         self.__name_hashes = set()
+        self.__checksums = set()
         self.__not_stored_count = 0
 
     @property
@@ -48,43 +49,39 @@ class Store:
 
     def list(self, entries: Generator) -> list:
         stored = []
-        self.__path_hashes.clear()
-        self.__name_hashes.clear()
         self.__not_stored_count = 0
         for e in entries:
             if e.kind not in (Constants.IMAGE_KIND, Constants.VIDEO_KIND, Constants.OTHER_KIND):
                 raise StorageError(f"Invalid kind {str(e.kind)} in list for {e.name}")
-
-            if e.check_if_in_catalog and self.has_checksum(e.checksum):
+            if e.check_if_in_catalog and ((e.checksum in self.__checksums) or self.has_checksum(e.checksum)):
                 # a file with this checksum has already been uploaded into the catalog.
                 self.__not_stored_count += 1
                 continue
-            if not self.allow_duplicates:
+            if not self.allow_duplicates and ((e.path_hash in self.__path_hashes) or self.has_path_hash(e.path_hash)):
                 # don't store if we have this already in our list of hashes we already stored. path_hash = path+checksum
-                if e.path_hash in self.__path_hashes:
-                    self.__not_stored_count += 1
-                    continue
-            if self.allow_duplicates or not self.has_hash(e.path_hash):
-                # avoid same name
-                self.get_name(e)
-                try:
-                    self.elastic.index(index=self.index, body=e.to_dict())
-                except RequestError as err:
-                    print("------------- Failed to store:-------------")
-                    print(e.to_dict())
-                    print(err)
-                    self.__not_stored_count += 1
-                else:
-                    if not self.allow_duplicates:
-                        self.__path_hashes.add(e.path_hash)
-                        self.__name_hashes.add(e.hash)
-                    stored.append(e)
-            else:
                 self.__not_stored_count += 1
+                continue
+
+            # avoid same name
+            self.get_name(e)
+            try:
+                self.elastic.index(index=self.index, body=e.to_dict())
+            except RequestError as err:
+                print("------------- Failed to store:-------------")
+                print(e.to_dict())
+                print(err)
+                self.__not_stored_count += 1
+            else:
+                if not self.allow_duplicates:
+                    self.__path_hashes.add(e.path_hash)
+                    self.__name_hashes.add(e.hash)
+                    self.__checksums.add(e.checksum)
+                stored.append(e)
+
         return stored
 
-    def has_hash(self, hash) -> bool:
-        s = Search(using=self.elastic, index=self.index).filter('term', path_hash=hash)
+    def has_path_hash(self, path_hash) -> bool:
+        s = Search(using=self.elastic, index=self.index).filter('term', path_hash=path_hash)
         result = s.execute()
         hits = len(result.hits)
         return hits > 0

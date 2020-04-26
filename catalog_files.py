@@ -45,7 +45,7 @@ class CatalogFiles:
 
     def catalog_dir(self, directory: str, recurse: bool = False) -> int:
         count = 0
-        if directory in self._ignored_dirs:
+        if any(ignore in directory for ignore in self._ignored_dirs):
             return 0
         with os.scandir(directory) as iterator:
             for item in iterator:
@@ -59,7 +59,7 @@ class CatalogFiles:
 
     def import_old_dir(self, directory: str, dest_path: str, is_month: bool = False) -> int:
         count = 0
-        if directory in self._ignored_dirs:
+        if any(ignore in directory for ignore in self._ignored_dirs):
             return 0
         with os.scandir(directory) as iterator:
             for item in iterator:
