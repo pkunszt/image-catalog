@@ -3,6 +3,9 @@ import sys
 import elastic
 import data
 import default_args
+import os
+import json
+from data import Factory
 
 store: elastic.Store
 reader: elastic.Retrieve
@@ -10,46 +13,59 @@ deleter: elastic.Delete
 updated: int = 0
 deleted: int = 0
 total: int = 0
+nas_root: str = ""
+in_catalog_only: dict = dict()
+elastic_paths: set = set()
+on_disk_only: list = []
 
 
-def check(elastic_entry, quiet: bool = True):
+def check_catalog(elastic_entry):
     global deleted, updated
-    try:
-        disk_entry = data.Factory.from_path(elastic_entry.full_path)
-    except FileNotFoundError:
-        if not quiet:
-            print(f"{elastic_entry.full_path} In catalog but not on disk")
-        deleter.id(elastic_entry.id)
-        deleted += 1
-        return
+    path = os.path.join(nas_root, elastic_entry.full_path)
+    if not os.path.isfile(path):
+        print(f"In Catalog but not on disk: {elastic_entry.full_path}")
+        # TODO skip duplicates. If the same checksum exists in the catalog elsewhere.
+        in_catalog_only.setdefault(elastic_entry.checksum, []).append(path)
+    else:
+        elastic_paths.add(path)
 
-    change = elastic_entry.diff(disk_entry)
-    if change:
-        store.update(change, elastic_entry.id)
-        updated += 1
-        if not quiet:
-            print(f"Updating {elastic_entry.full_path}")
-            print(change)
+
+def check_files(dirname):
+    with os.scandir(dirname) as iterator:
+        for item in iterator:
+            if item.is_dir():
+                check_files(item.path)
+            elif item.is_file():
+                if item.path not in elastic_paths:
+                    print(f"File {item.path} is on disk but not in elastic")
+                    on_disk_only.append(Factory.from_path(item.path))
 
 
 def main(arg):
-    global updated, deleted, store, reader, deleter, total
+    global updated, deleted, store, reader, deleter, total, nas_root
 
     parser = argparse.ArgumentParser(
         description="""This tool will sync the catalog with the disk contents. The disk is taken as truth,
     the catalog is changed based on what is on disk.
 
-    New data on disk will NOT be loaded into the catalog, use add_to_catalog for this.
-    Items in the catalog that are not on disk anymore are removed from the catalog.
-    Items that changed on disk are updated in the catalog (change in size, modify time..)""")
+    New data on disk will be loaded into the catalog.
+    Items in the catalog that are not on disk anymore are removed from the catalog, if they were moved,
+    that will be detected. Items that changed on disk with the same name are not detected.
+    (change in size, modify time..)""")
     parser.add_argument('dirname', nargs='?', type=str, help='name of directory to look at')
     parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
+    parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
+    parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
     default_args.default_arguments(parser)
     args = parser.parse_args(arg)
 
     connection = elastic.Connection(args.host, args.port)
     if args.index is not None:
         connection.index = args.index
+
+    with open("config.json", 'r') as file:
+        config = json.load(file)
+    nas_root = config['nas_root'] if not args.nas_root else args.nas_root
 
     if not args.quiet:
         print(f"Checking catalog on {connection.host}:{connection.port} with index {connection.index}")
@@ -60,12 +76,35 @@ def main(arg):
 
     updated = deleted = total = 0
     for entry in reader.all_entries(args.dirname):
-        check(data.Factory.from_elastic_entry(entry), args.quiet)
-        total += 1
+        check_catalog(data.Factory.from_elastic_entry(entry))
 
-    return updated, deleted, total
+    check_files(nas_root)
+    if not args.quiet:
+        print(f"Catalog entries in sync: {len(elastic_paths)}")
+        print(f"Catalog entries not found on disk: {len(in_catalog_only.keys())}")
+        print(f"On disk but not on catalog: {len(on_disk_only)}")
+    elastic_paths.clear()
+
+    # detected moved file
+    for new_file in on_disk_only:
+        if new_file.checksum in in_catalog_only.keys():
+            cat_item = in_catalog_only.pop(new_file.checksum)
+            print(f"File {cat_item[0]} moved to {new_file.full_path}")
+            # TODO update catalog entry to point to new location, deal with more than one item in list
+            updated += 1
+        else:
+            print(f"File {new_file.full_path} is only on disk but not in Catalog")
+            # load this item into the catalog
+            deleted += 1
+
+    for k, v in in_catalog_only.items():
+        print(f"""{v[0]} is only in the catalog, was probably removed manually. Remove from catalog and also 
+        remove remote copies or restore from dropbox if possible?""")
+        # TODO ask for input and delete catalog entry, remove also dropbox if any, deal with more than one item in list
+
+    return
 
 
 if __name__ == '__main__':
     main(sys.argv[1:])
-    print(f"updated: {updated} entries, deleted {deleted} entries from a total of {total} entries")
+    print(f"updated: {updated} entries, deleted {deleted} entries in catalog")

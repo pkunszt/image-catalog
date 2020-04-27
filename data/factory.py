@@ -147,7 +147,10 @@ class Factory:
         output = subprocess.run(['docker', 'run', '--rm',
                                  '-v', f"{os.path.abspath(video.path)}:/files", 'sjourdan/ffprobe',
                                 f"/files/{video.name}"], capture_output=True)
-        lines = output.stderr.decode("utf-8").splitlines()
+        try:
+            lines = output.stderr.decode("utf-8").splitlines()
+        except UnicodeDecodeError:
+            lines = Factory.mydecode(output.stderr).splitlines()
         for line in lines:
             if line.find("Duration") > 0:
                 d = Factory._duration.match(line)
@@ -198,6 +201,13 @@ class Factory:
 
         return base.diff(update)
 
+    @staticmethod
+    def mydecode(binary) -> str:
+        decoded = ""
+        for i in binary:
+            if i < 128:
+                decoded += chr(i)
+        return decoded
 
 class DropboxHash:
     block_size = 1024 * 1024 * 4
