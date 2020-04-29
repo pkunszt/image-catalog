@@ -47,7 +47,7 @@ class Store:
     def elastic(self):
         return self.__elastic
 
-    def list(self, entries: Generator) -> list:
+    def list(self, entries: Generator, dryrun: bool = False) -> list:
         stored = []
         self.__not_stored_count = 0
         for e in entries:
@@ -65,7 +65,8 @@ class Store:
             # avoid same name
             self.get_name(e)
             try:
-                self.elastic.index(index=self.index, body=e.to_dict())
+                if not dryrun:
+                    self.elastic.index(index=self.index, body=e.to_dict())
             except RequestError as err:
                 print("------------- Failed to store:-------------")
                 print(e.to_dict())

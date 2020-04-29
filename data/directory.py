@@ -19,6 +19,7 @@ class Folder:
     geo: geopy.geocoders.osm.Nominatim = geopy.geocoders.Nominatim(user_agent="my_catalog")
     __name_date: re.Pattern
     __name_date2: re.Pattern
+    __path_date: re.Pattern
 
     def __init__(self):
         self.__file_list = []
@@ -27,6 +28,7 @@ class Folder:
         if not hasattr(type(self), "__name_date"):
             type(self).__name_date = re.compile('.*(?P<year>2[0-2]\d\d)(?P<mon>[0-1]\d)(?P<day>[0-3]\d).*')
             type(self).__name_date2 = re.compile('.*(?P<year>2[0-2]\d\d)-(?P<mon>[0-1]\d)-(?P<day>[0-3]\d).*')
+            type(self).__path_date = re.compile('.*(?P<year>2[0-2]\d\d)/(?P<mon>[0-1]\d)/(?P<day>[0-3]\d).*')
 
     def read(self, directory_name: str) -> None:
         """Read from a given directory all image and video files.
@@ -246,6 +248,18 @@ class Folder:
         return ""
 
     @staticmethod
+    def path_from_path(entry) -> bool:
+        n = Folder.__path_date.match(entry.path)
+        if n:
+            year = n.group('year')
+            month = n.group('mon')
+            day = n.group('day')
+            entry.path = os.path.join(year, constants.get_month_by_number(month), "Whatsapp")
+            entry.name = year + "-" + month + "-" + day + "." + entry.type
+            return True
+        return False
+
+    @staticmethod
     def set_path_from_name(entry):
         if hasattr(entry, "captured"):
             entry.set_path_from_captured_time()
@@ -255,4 +269,16 @@ class Folder:
             if path:
                 entry.path = os.path.join(path, "Whatsapp")
                 return  # do not modify the name if we got the path from it
+            else:
+                if Folder.path_from_path(entry):
+                    return
+
             entry.set_path_from_modified_time()
+
+    def print_folders(self):
+        paths = dict()
+        for item in self.__file_list:
+            n = paths.setdefault(item.path, 0)
+            paths[item.path] += 1
+        for path in paths.keys():
+            print(f"{path} : Intention to add {paths[path]} files")

@@ -28,6 +28,12 @@ class Retrieve:
         # note: can add _source_includes=['path', 'name'] to restrict the result set
         return result['_source']
 
+    def get_by_checksum(self, checksum: str):
+        s = Search(using=self.elastic, index=self.index).filter('term', checksum=checksum)
+        result = s.execute()
+        for e in result.hits:
+            yield Factory.from_elastic_entry(e)
+
     def all_entries(self, directory_filter: str = None):
         s = Search(using=self.elastic, index=self.index)
         if directory_filter is not None:

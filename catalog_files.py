@@ -9,9 +9,12 @@ import elastic
 class CatalogFiles:
     _ignored_dirs = ["_gsdata_"]
 
-    def __init__(self, host: str, port: int, index: str = "", dropbox: bool = False):
+    def __init__(self, host: str, port: int, index: str = "", dropbox: bool = False,
+                 verbose: bool = True, dryrun: bool = False):
         self._folder = data.Folder()
         self._dropbox = dropbox
+        self._verbose = verbose
+        self._dryrun = dryrun
         self._connection = elastic.Connection(host, port)
         if index:
             self._connection.index = index
@@ -54,7 +57,8 @@ class CatalogFiles:
 
         self.get_files(directory, check=True)
         count += self.read_and_update_directory()
-        print(f"Loaded from {directory} : {count}   / Not stored: {self._store.not_stored}")
+        if self._verbose and not self._dryrun:
+            print(f"Loaded from {directory} : {count}   / Not stored: {self._store.not_stored}")
         return count
 
     def import_old_dir(self, directory: str, dest_path: str, is_month: bool = False) -> int:
@@ -68,7 +72,8 @@ class CatalogFiles:
 
         self.get_files(directory, check=is_month)
         count += self.read_and_import_directory(dest_path, is_month)
-        print(f"Imported from {directory} : {count}   / Not stored: {self._store.not_stored}")
+        if self._verbose:
+            print(f"Imported from {directory} : {count}   / Not stored: {self._store.not_stored}")
         return count
 
     def get_files(self, directory: str, check: bool = False):
@@ -83,8 +88,10 @@ class CatalogFiles:
                                   keep_manual_names=False)
         self._folder.update_video_path()
         self._folder.update_name_from_location()
+        if self._verbose and not self._dryrun:
+            self._folder.print_folders()
 
-        return self.do_copy(print_dirs=True)
+        return self.do_copy()
 
     def read_and_import_directory(self, dest_path: str, is_month_path: bool) -> int:
         self._folder.update_names(destination_folder=dest_path,
@@ -99,13 +106,13 @@ class CatalogFiles:
 
         return self.do_copy()
 
-    def do_copy(self, print_dirs: bool = False):
-        stored_files = self._store.list(self._folder.files)
-        self.copy_to_nas(stored_files)
-        if self._dropbox:
-            self.copy_to_dropbox(stored_files)
-        if print_dirs:
+    def do_copy(self):
+        stored_files = self._store.list(self._folder.files, dryrun=self._dryrun)
+        if self._verbose and not self._dryrun:
             self.print_target_dirs(stored_files)
+        self.copy_to_nas(stored_files)
+        if self._dropbox and not self._dryrun:
+            self.copy_to_dropbox(stored_files)
         return len(stored_files)
 
     def copy_to_nas(self, stored_items):
@@ -113,9 +120,12 @@ class CatalogFiles:
             source = item.original_path
             dest_path = os.path.join(self.nas_root, item.path)
             dest = os.path.join(dest_path, item.name)
-            if not os.path.exists(dest_path):
-                pathlib.Path(dest_path).mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, dest)
+            if self._dryrun:
+                print(f"{source} -> {dest}")
+            else:
+                if not os.path.exists(dest_path):
+                    pathlib.Path(dest_path).mkdir(parents=True, exist_ok=True)
+                shutil.copy2(source, dest)
 
     def copy_to_dropbox(self, stored_items):
         for item in stored_items:
@@ -132,6 +142,7 @@ class CatalogFiles:
     @staticmethod
     def print_target_dirs(file_list):
         dirs = dict()
+        print(f"Storing {len(file_list)} files")
         for entry in file_list:
             dirs.setdefault(entry.path, []) \
                 .append(0)

@@ -14,7 +14,8 @@ updated: int = 0
 deleted: int = 0
 total: int = 0
 nas_root: str = ""
-in_catalog_only: dict = dict()
+in_catalog_only: list = []
+in_catalog_only_checksums: dict = dict()
 elastic_paths: set = set()
 on_disk_only: list = []
 
@@ -24,8 +25,8 @@ def check_catalog(elastic_entry):
     path = os.path.join(nas_root, elastic_entry.full_path)
     if not os.path.isfile(path):
         print(f"In Catalog but not on disk: {elastic_entry.full_path}")
-        # TODO skip duplicates. If the same checksum exists in the catalog elsewhere.
-        in_catalog_only.setdefault(elastic_entry.checksum, []).append(path)
+        in_catalog_only.append(elastic_entry)
+        in_catalog_only_checksums[elastic_entry.checksum] = path
     else:
         elastic_paths.add(path)
 
@@ -87,20 +88,23 @@ def main(arg):
 
     # detected moved file
     for new_file in on_disk_only:
-        if new_file.checksum in in_catalog_only.keys():
-            cat_item = in_catalog_only.pop(new_file.checksum)
-            print(f"File {cat_item[0]} moved to {new_file.full_path}")
+        if new_file.checksum in in_catalog_only_checksums.keys():
+            cat_item = in_catalog_only_checksums[new_file.checksum]
+            print(f"File {cat_item} moved to {new_file.full_path}")
             # TODO update catalog entry to point to new location, deal with more than one item in list
             updated += 1
         else:
             print(f"File {new_file.full_path} is only on disk but not in Catalog")
-            # load this item into the catalog
+            # TODO load this item into the catalog
             deleted += 1
 
-    for k, v in in_catalog_only.items():
-        print(f"""{v[0]} is only in the catalog, was probably removed manually. Remove from catalog and also 
+    for file in in_catalog_only:
+        print(f"""{file.full_path} is only in the catalog, was probably removed manually. Remove from catalog and also 
         remove remote copies or restore from dropbox if possible?""")
         # TODO ask for input and delete catalog entry, remove also dropbox if any, deal with more than one item in list
+        for item in reader.get_by_checksum(file.checksum):
+            if item.id != file.id:
+                print(f"{file.full_path} is still in catalog as {item.full_path}")
 
     return
 
