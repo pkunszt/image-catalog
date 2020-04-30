@@ -63,6 +63,8 @@ class Constants:
     known_locations = {'Riederalp', 'Le Lignon', 'Zürich', 'Winterthur', 'Los Angeles', 'Barcelona',
                        'Zuerich', 'Duebendorf', 'Geneve'}
 
+    ignored_paths = {'.DS_Store'}
+
 
 class TestConstants:
     testdir = "testfiles"
