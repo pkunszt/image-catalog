@@ -7,7 +7,7 @@ import geopy.exc
 
 import constants
 from constants import Constants
-from data.factory import Factory, FactoryError
+from data.factory import Factory, FactoryError, FactoryZeroFileSizeError
 from data.entry import Entry
 
 
@@ -56,6 +56,8 @@ class Folder:
             self.__valid_types_found.add(item.type)
         except FactoryError:
             self.__invalid_types_found.add(os.path.splitext(path.lower())[1])
+        except FactoryZeroFileSizeError:
+            pass    # ignore files of zero size
 
     @property
     def invalid_types(self) -> set:

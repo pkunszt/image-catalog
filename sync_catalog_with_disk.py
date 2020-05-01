@@ -158,13 +158,23 @@ def main(arg):
         store.list(item for item in store_list)
 
     for file in in_catalog_only:
-        if file.checksum not in updated_checksums:
-            print(f"""{file.full_path} is only in the catalog - as far as we know.""")
-            # TODO ask for input and delete catalog entry, remove also dropbox if any,
-            #  deal with more than one item in list
-            for item in reader.get_by_checksum(file.checksum):
-                if item.id != file.id:
-                    print(f"{file.full_path} is still in catalog as {item.full_path}")
+        if file.checksum in updated_checksums:
+            continue
+        print(f"""{file.full_path} is only in the catalog.""")
+        skip = False
+        for item in reader.get_by_checksum(file.checksum):
+            if item.id != file.id:
+                print(f"{file.full_path} is still in catalog as {item.full_path}. Deleting this duplicate.")
+                deleter.id(file.id)
+                deleted += 1
+                skip = True
+                break
+        if skip:
+            continue
+        yes = input('Delete this file from catalog y/n?:')
+        if yes.lower().startswith('y'):
+            deleter.id(file.id)
+            deleted += 1
 
     return
 

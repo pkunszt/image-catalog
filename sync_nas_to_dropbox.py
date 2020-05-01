@@ -2,6 +2,7 @@ import argparse
 import default_args
 from catalog_files import CatalogFiles
 from elastic import Retrieve
+from data import DBoxError
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Scan the catalog for entries where the NAS copy is there
@@ -28,10 +29,14 @@ if __name__ == '__main__':
     n = 0
     for entry in retrieve.on_nas_but_not_on_dropbox(args.limit):
         entry.set_original_path_on_nas(cat_folder.nas_root)
-        cat_folder.copy_item_to_dropbox(entry)
-        cat_folder.update({"dropbox": True}, entry.id)
-        n += 1
-        if args.verbose:
-            print(f"Copied {entry.full_path}")
+        try:
+            cat_folder.copy_item_to_dropbox(entry)
+        except DBoxError as e:
+            print("Ignoring : ", str(e))
+        else:
+            cat_folder.update({"dropbox": True}, entry.id)
+            n += 1
+            if args.verbose:
+                print(f"Copied {entry.full_path}")
 
     print(f"Copied {n} entries from NAS to dropbox.")

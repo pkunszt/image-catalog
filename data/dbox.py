@@ -6,6 +6,11 @@ import dropbox.exceptions
 import json
 
 
+class DBoxError(dropbox.exceptions.DropboxException):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class DBox:
     _config: dict = None
     _full_dbox: dropbox.Dropbox = None
@@ -82,12 +87,16 @@ class DBox:
             else:
                 raise apie
 
-        if size > DBox.MAX_SIZE:
-            self.put_large_file(source, size, dest_dir, dest_name, modified)
-        else:
-            with open(source, "rb") as file:
-                contents = file.read()
-                self._dbox.files_upload(contents, os.path.join(dest_dir, dest_name), client_modified=modified)
+        try:
+            if size > DBox.MAX_SIZE:
+                self.put_large_file(source, size, dest_dir, dest_name, modified)
+            else:
+                with open(source, "rb") as file:
+                    contents = file.read()
+                    self._dbox.files_upload(contents, os.path.join(dest_dir, dest_name), client_modified=modified)
+        except dropbox.exceptions.DropboxException as e:
+            print("Dropbox Exception: ", e.request_id, e)
+            raise DBoxError(repr(e))
 
     def put_large_file(self, source: str, size: int, dest_dir: str, dest_name: str, modified):
         with open(source, "rb") as file:

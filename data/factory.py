@@ -20,6 +20,11 @@ class FactoryError(ValueError):
         super().__init__(message)
 
 
+class FactoryZeroFileSizeError(ValueError):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class Factory:
     _duration: Pattern[str] = re.compile('.*(?P<hour>\d\d):(?P<min>\d\d):(?P<sec>\d\d)\.(?P<msec>\d+).*')
 
@@ -182,6 +187,8 @@ class Factory:
         st = os.stat(path)
         e.modified = st.st_mtime * 1000
         e.size = st.st_size
+        if e.size == 0:
+            raise FactoryZeroFileSizeError(path)
         e.checksum = Factory.checksum(path)
 
     @staticmethod
@@ -208,6 +215,7 @@ class Factory:
             if i < 128:
                 decoded += chr(i)
         return decoded
+
 
 class DropboxHash:
     block_size = 1024 * 1024 * 4
