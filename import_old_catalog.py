@@ -4,7 +4,7 @@ import re
 import argparse
 import default_args
 import constants
-from catalog_files import CatalogFiles
+from catalog import CatalogFiles
 
 
 def walk_year(directory_name: str, dest_path: str) -> int:

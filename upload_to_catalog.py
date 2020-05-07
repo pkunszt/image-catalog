@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 import default_args
-from catalog_files import CatalogFiles
+from catalog import CatalogFiles
 
 
 if __name__ == '__main__':
