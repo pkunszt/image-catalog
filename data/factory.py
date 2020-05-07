@@ -2,8 +2,7 @@ from typing import Pattern
 from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
 from data.other import Other, InvalidOtherError
-from data.dbox import DBox
-from catalog import Constants
+from tools import Constants
 import os
 import io
 import hashlib
@@ -74,23 +73,23 @@ class Factory:
                     raise FactoryError(f"Path {path} is neither image nor video nor other")
 
     @staticmethod
-    def from_dropbox(path: str):
+    def from_dropbox(entry):
         """Create an Image or Video object based on the dropbox path given"""
-        dbox = DBox(full=True)
         try:
             result = Image()
-            result.full_path = path
+            result.full_path = entry['path']
         except InvalidImageError:
             try:
                 result = Video()
-                result.full_path = path
+                result.full_path = entry['path']
             except InvalidVideoError:
                 try:
                     result = Other()
-                    result.full_path = path
+                    result.full_path = entry['path']
                 except InvalidOtherError:
-                    raise FactoryError(f"Path {path} is neither image nor video nor other")
-        return result.update(dbox.get_metadata(path))
+                    raise FactoryError(f"Path {entry['path']} is neither image nor video nor other")
+        del entry['path']
+        return result.update(entry)
 
     @staticmethod
     def __image_from_directory_item(path: str) -> Image:

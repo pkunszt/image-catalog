@@ -43,11 +43,13 @@ class DBox:
     def list_dir(self, path: str, recurse: bool = False) -> str:
         result_list = self._dbox.files_list_folder(path, recursive=recurse)
         for item in result_list.entries:
-            yield item.path_display
+            if type(item) is dropbox.files.FileMetadata:
+                yield item.path_display
         while result_list.has_more:
             result_list = self._dbox.files_list_folder_continue(result_list.cursor)
             for item in result_list.entries:
-                yield item.path_display
+                if type(item) is dropbox.files.FileMetadata:
+                    yield item.path_display
 
     def get_metadata(self, path: str) -> dict:
         file_metadata = self._dbox.files_get_metadata(path, include_media_info=True)
@@ -55,7 +57,8 @@ class DBox:
             size=file_metadata.size,
             checksum=file_metadata.content_hash,
             modified=int(file_metadata.client_modified.timestamp()*1000),
-            dropbox_path=True
+            dropbox_path=True,
+            path=file_metadata.path_display
         )
         if hasattr(file_metadata, "media_info") and file_metadata.media_info is not None:
             media_metadata = file_metadata.media_info.get_metadata()
@@ -77,15 +80,35 @@ class DBox:
         for file in self.list_dir(path, recurse):
             yield self.get_metadata(file)
 
-    def put_file(self, source: str, size: int, dest_dir: str, dest_name: str, modified):
+    def exists(self, path) -> bool:
+        """Check if a path (directory or file) exists."""
         try:
-            self._dbox.files_get_metadata(dest_dir)
+            self._dbox.files_get_metadata(path)
         except dropbox.exceptions.ApiError as apie:
             err = apie.error
             if err.get_path().is_not_found():
-                self._dbox.files_create_folder_v2(dest_dir)
+                return False
             else:
-                raise apie
+                raise DBoxError(repr(err))
+        else:
+            return True
+
+    def is_dir(self, path) -> bool:
+        """Check if a path is a directory. If the path does not exist, it just returns false"""
+        try:
+            self._dbox.files_list_folder(path, recursive=False, include_deleted=False)
+        except dropbox.exceptions.ApiError as apie:
+            err = apie.error
+            if err.get_path().is_not_folder() or err.get_path().is_not_found():
+                return False
+            else:
+                raise DBoxError(repr(err))
+        else:
+            return True
+
+    def put_file(self, source: str, size: int, dest_dir: str, dest_name: str, modified):
+        if not self.exists(dest_dir):
+            self._dbox.files_create_folder_v2(dest_dir)
 
         try:
             if size > DBox.MAX_SIZE:
@@ -117,3 +140,21 @@ class DBox:
                 Size assertion is wrong {size} != {offset+len(contents)}""")
                 raise ValueError("Problem")
             self._dbox.files_upload_session_finish(contents, cursor, commit)
+
+    def copy_file(self, from_path, to_path, create_folders: bool = False):
+        try:
+            self._dbox.files_copy_v2(from_path, to_path)
+        except dropbox.exceptions.ApiError as apie:
+            if create_folders:
+                err = apie.error
+                if err.get_path().is_not_found():
+                    self.create_folder(os.path.basename(to_path))
+                    self.copy_file(from_path, to_path)
+            else:
+                raise DBoxError(repr(apie))
+
+    def create_folder(self, path):
+        self._dbox.files_create_folder_v2(path)
+
+    def download_file(self, path, destination):
+        self._dbox.files_download_to_file(destination, path)

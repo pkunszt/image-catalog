@@ -2,7 +2,7 @@ import os
 import datetime
 import hashlib
 import inspect
-from catalog import Constants
+from tools import Constants
 
 
 class EntryException(LookupError):
@@ -239,3 +239,6 @@ class Entry:
 
     def set_original_path_on_nas(self, nas_root):
         self._original_path = os.path.join(nas_root, self.full_path)
+
+    def set_original_path_on_dropbox(self, dropbox_root):
+        self._original_path = os.path.join(dropbox_root, self.full_path)

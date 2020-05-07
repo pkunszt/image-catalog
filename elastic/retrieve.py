@@ -81,3 +81,19 @@ class Retrieve:
         result = s.execute()
         for e in result.hits:
             yield Factory.from_elastic_entry(e)
+
+    def on_dropbox_but_not_on_nas(self, limit: int = 0):
+        s = Search.from_dict({
+            "query": {
+                "bool": {
+                    "must_not": {"exists": {"field": "nas"}},
+                    "filter": {"term": {"dropbox": "true"}}
+                    }
+                }
+            })
+        s = s.using(self.elastic).index(self.index)
+        if limit:
+            s = s[:limit]
+        result = s.execute()
+        for e in result.hits:
+            yield Factory.from_elastic_entry(e)

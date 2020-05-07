@@ -1,6 +1,6 @@
 from __future__ import annotations
 from data.entry import Entry
-from catalog import Constants
+from tools import Constants
 
 
 class InvalidVideoError(ValueError):

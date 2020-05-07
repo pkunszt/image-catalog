@@ -8,7 +8,7 @@ if __name__ == '__main__':
     Duplicates can only happen if the 'allowed duplicates' flag is set when adding items.""")
     parser.add_argument('--dirname', '-d', type=str, help='name of directory check for exact duplicates')
     parser.add_argument('--dryrun', action='store_true', help="don't delete, just print. Default: false")
-    default_args.default_arguments(parser)
+    default_args.elastic_arguments(parser)
     args = parser.parse_args()
 
     connection = elastic.Connection(args.host, args.port)

@@ -5,8 +5,7 @@ import reverse_geocoder
 import geopy
 import geopy.exc
 
-from catalog import constants
-from catalog import Constants
+from tools import Constants, get_month_by_number
 from data.factory import Factory, FactoryError, FactoryZeroFileSizeError
 from data.entry import Entry
 
@@ -58,6 +57,19 @@ class Folder:
             self.__invalid_types_found.add(os.path.splitext(path.lower())[1])
         except FactoryZeroFileSizeError:
             pass    # ignore files of zero size
+
+    def dbox_stream(self, iterable) -> None:
+        """Read from an iterator. We expect each element to be already being an entry that we can add to
+        the file list"""
+        for obj in iterable:
+            try:
+                item = Factory.from_dropbox(obj)
+                self.__file_list.append(item)
+                self.__valid_types_found.add(item.type)
+            except FactoryError:
+                self.__invalid_types_found.add(os.path.splitext(item.path.lower())[1])
+            except FactoryZeroFileSizeError:
+                pass    # ignore files of zero size
 
     @property
     def invalid_types(self) -> set:
@@ -239,13 +251,13 @@ class Folder:
         if n1:
             year = n1.group('year')
             month = n1.group('mon')
-            return os.path.join(year, constants.get_month_by_number(month))
+            return os.path.join(year, get_month_by_number(month))
 
         n2 = Folder.__name_date2.match(name)
         if n2:
             year = n2.group('year')
             month = n2.group('mon')
-            return os.path.join(year, constants.get_month_by_number(month))
+            return os.path.join(year, get_month_by_number(month))
 
         return ""
 
@@ -256,7 +268,7 @@ class Folder:
             year = n.group('year')
             month = n.group('mon')
             day = n.group('day')
-            entry.path = os.path.join(year, constants.get_month_by_number(month), "Whatsapp")
+            entry.path = os.path.join(year, get_month_by_number(month), "Whatsapp")
             entry.name = year + "-" + month + "-" + day + "." + entry.type
             return True
         return False

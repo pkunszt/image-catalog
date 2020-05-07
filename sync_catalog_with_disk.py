@@ -5,8 +5,8 @@ import data
 import os
 import json
 
-from tools import default_args, run_time
-from catalog import Constants
+from tools import elastic_arguments, run_time, root_arguments
+from tools import Constants
 from data import Factory
 
 store: elastic.Store
@@ -99,9 +99,8 @@ def main(arg):
     parser.add_argument('dirname', type=str, help='name of directory to look at')
     parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
     parser.add_argument('--recursive', '-r', action='store_true', help='no verbose output')
-    parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
-    parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
-    default_args.default_arguments(parser)
+    root_arguments(parser)
+    elastic_arguments(parser)
     args = parser.parse_args(arg)
 
     connection = elastic.Connection(args.host, args.port)

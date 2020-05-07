@@ -2,7 +2,7 @@ import os
 import sys
 import re
 import argparse
-from tools import default_args
+from tools import elastic_arguments, root_arguments
 from catalog import CatalogFiles, get_months
 
 
@@ -30,10 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('basedir', type=str, help='Base directory of old catalog.')
     parser.add_argument('year', type=str, nargs='+', help='Year to import.')
     parser.add_argument('--dropbox', action='store_true', help='Also create the dropbox copy. Defaults to FALSE')
-    parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
-    parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
+    root_arguments(parser)
     parser.add_argument('--month', type=str, help='Only catalog the given month.')
-    default_args.default_arguments(parser)
+    elastic_arguments(parser)
     args = parser.parse_args()
 
     year = re.compile("[1-2]\d\d\d")

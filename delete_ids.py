@@ -1,12 +1,12 @@
 import argparse
 import os
 import csv
-from tools import default_args
+from tools import elastic_arguments
 import elastic
 
 
 def delete_from_csv(filename):
-    with open(filename, "r") as csvfile:
+    with open(filename, "r", encoding='utf-8-sig') as csvfile:
         csv_ids = csv.DictReader(csvfile)
         idlist = [
             line['_id']
@@ -18,7 +18,7 @@ def delete_from_csv(filename):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Delete id or list of IDs')
     parser.add_argument('id_or_csvfile', type=str, help='An ID string or a csv file with a list of ID strings')
-    default_args.default_arguments(parser)
+    elastic_arguments(parser)
     args = parser.parse_args()
 
     connection = elastic.Connection(args.host, args.port)

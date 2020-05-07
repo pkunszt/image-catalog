@@ -1,6 +1,6 @@
 from elasticsearch import Elasticsearch
 from elasticsearch_dsl import connections
-from catalog.constants import Constants
+from tools.constants import Constants
 
 
 class Connection:

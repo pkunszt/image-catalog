@@ -1,6 +1,7 @@
 import os
 import time
 from unittest import TestCase
+
 import sync_catalog_with_disk
 from data import Folder
 from elastic import Store, Connection, Delete, Retrieve
@@ -8,7 +9,7 @@ from elastic import Store, Connection, Delete, Retrieve
 
 class TestSyncCatalogWithDisk(TestCase):
     test_file = "testfile.mov"
-    test_dir = "./testfiles"
+    test_dir = "../testfiles"
     test_index = 'test_sync'
     test_path = os.path.join(test_dir, test_file)
 

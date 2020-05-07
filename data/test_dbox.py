@@ -3,8 +3,8 @@ from unittest import TestCase
 import os
 from .dbox import DBox
 from .factory import Factory, FactoryError
-from catalog import TestConstants
-from data.directory import Folder
+from tools import TestConstants
+from .directory import Folder
 
 
 class TestDBox(TestCase):
@@ -18,6 +18,17 @@ class TestDBox(TestCase):
 
         for i in range(0, len(sorted_list)):
             self.assertEqual(sorted_list[i], os.path.join("/", TestConstants.testdir, TestConstants.files[i]))
+
+    def test_exists(self):
+        d = DBox(True)
+        self.assertTrue(d.exists('/testfiles'));
+        self.assertFalse(d.exists('/testfiles/b392234'))
+
+    def test_is_dir(self):
+        d = DBox(True)
+        self.assertTrue(d.is_dir('/testfiles'));
+        self.assertFalse(d.is_dir('/testfiles/b392234'))
+        self.assertFalse(d.is_dir('/testfiles/spidey.jpeg'))
 
     def test_entries(self):
         d = DBox(True)

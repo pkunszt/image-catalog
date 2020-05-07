@@ -1,21 +1,19 @@
 import os
 import sys
 import argparse
-from tools import default_args
+from tools import elastic_arguments, upload_arguments, root_arguments
 from catalog import CatalogFiles
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Upload the given directory into the catalog.
-    Files will be copied or moved, default is just to copy.""")
+    Files will be copied into place on the NAS. The files will also be uploaded to the dropbox copy if
+    explicitly requested with --dropbox. The sync can be performed also later using sync_nas_to_dropbox.""")
     parser.add_argument('directory', type=str, help='Full path of directory to upload.')
-    parser.add_argument('--recursive', '-r', action='store_true', help='Recurse into subdirectories. Defaults to FALSE')
-    parser.add_argument('--quiet', '-q', action='store_true', help='Recurse into subdirectories. Defaults to FALSE')
-    parser.add_argument('--dryrun', '-d', action='store_true', help='Recurse into subdirectories. Defaults to FALSE')
+    upload_arguments(parser)
     parser.add_argument('--dropbox', action='store_true', help='Also create the dropbox copy. Defaults to FALSE')
-    parser.add_argument('--nas_root', type=str, help='Use this as catalog root on NAS')
-    parser.add_argument('--dropbox_root', type=str, help='Use this as catalog root on Dropbox')
-    default_args.default_arguments(parser)
+    root_arguments(parser)
+    elastic_arguments(parser)
     args = parser.parse_args()
 
     if not os.path.isdir(args.directory):
