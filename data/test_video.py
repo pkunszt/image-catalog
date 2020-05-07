@@ -1,6 +1,6 @@
 from unittest import TestCase
 from data.video import Video, InvalidVideoError
-from constants import Constants
+from catalog import Constants
 
 
 class TestVideo(TestCase):

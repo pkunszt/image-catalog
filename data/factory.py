@@ -3,6 +3,7 @@ from data.video import Video, InvalidVideoError
 from data.image import Image, InvalidImageError
 from data.other import Other, InvalidOtherError
 from data.dbox import DBox
+from catalog import Constants
 import os
 import io
 import hashlib
@@ -12,7 +13,6 @@ import subprocess
 import inspect
 import re
 from datetime import datetime
-from constants import Constants
 
 
 class FactoryError(ValueError):

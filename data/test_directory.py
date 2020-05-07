@@ -1,6 +1,6 @@
 from unittest import TestCase
 import os
-from constants import TestConstants, Constants
+from catalog import TestConstants, Constants
 from data import Image
 from data.directory import Folder
 

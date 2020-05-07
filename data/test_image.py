@@ -1,7 +1,7 @@
 from unittest import TestCase
 from data.image import Image, InvalidImageError
 from data.factory import Factory
-from constants import Constants
+from catalog import Constants
 
 
 class TestImage(TestCase):

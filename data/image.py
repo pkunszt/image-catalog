@@ -1,6 +1,6 @@
 from __future__ import annotations
 from data.entry import Entry
-from constants import Constants
+from catalog import Constants
 
 
 class InvalidImageError(ValueError):

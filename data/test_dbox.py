@@ -3,7 +3,7 @@ from unittest import TestCase
 import os
 from .dbox import DBox
 from .factory import Factory, FactoryError
-from constants import TestConstants
+from catalog import TestConstants
 from data.directory import Folder
 
 

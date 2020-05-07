@@ -3,12 +3,11 @@ import sys
 import re
 import argparse
 import default_args
-import constants
-from catalog import CatalogFiles
+from catalog import CatalogFiles, get_months
 
 
 def walk_year(directory_name: str, dest_path: str) -> int:
-    months = constants.get_months()
+    months = get_months()
     count = 0
     with os.scandir(directory_name) as iterator:
         for item in iterator:

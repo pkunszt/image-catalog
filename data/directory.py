@@ -5,8 +5,8 @@ import reverse_geocoder
 import geopy
 import geopy.exc
 
-import constants
-from constants import Constants
+from catalog import constants
+from catalog import Constants
 from data.factory import Factory, FactoryError, FactoryZeroFileSizeError
 from data.entry import Entry
 

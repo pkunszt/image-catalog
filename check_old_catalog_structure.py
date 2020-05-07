@@ -1,7 +1,7 @@
 import os
 import argparse
 import re
-from constants import get_months
+from catalog import get_months
 
 
 def checkmonths(directory_name: str):

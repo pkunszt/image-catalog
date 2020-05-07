@@ -4,7 +4,7 @@ from elasticsearch_dsl import Search
 
 from data import Entry
 from elastic.connection import Connection
-from constants import Constants
+from catalog.constants import Constants
 import os
 
 

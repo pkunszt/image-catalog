@@ -4,14 +4,12 @@ import time
 from unittest import TestCase
 from typing import List
 
-from constants import TestConstants
 from data import Factory
 from elastic.connection import Connection
 from elastic.delete import Delete
 from elastic.retrieve import Retrieve
 from elastic.store import Store
 from data.directory import Folder
-from data.image import Image
 
 
 class TestStorage(TestCase):

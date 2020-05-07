@@ -2,7 +2,7 @@ import os
 import datetime
 import hashlib
 import inspect
-from constants import Constants
+from catalog import Constants
 
 
 class EntryException(LookupError):
