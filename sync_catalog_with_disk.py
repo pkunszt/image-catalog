@@ -2,12 +2,11 @@ import argparse
 import sys
 import elastic
 import data
-import default_args
 import os
 import json
 
+from tools import default_args, run_time
 from catalog import Constants
-from my_decorators import run_time
 from data import Factory
 
 store: elastic.Store
