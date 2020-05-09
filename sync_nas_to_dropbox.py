@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
     n = 0
     for entry in retrieve.on_nas_but_not_on_dropbox(args.limit):
-        entry.set_original_path_on_nas(cat_folder.nas_root)
+        entry.prepend_original_path(cat_folder.nas_root)
         try:
             cat_folder.copy_item_to_dropbox(entry)
         except DBoxError as e:

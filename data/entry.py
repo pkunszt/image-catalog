@@ -237,8 +237,5 @@ class Entry:
     def set_path_from_modified_time(self):
         self.path = os.path.join(self.modified_year, self.modified_month)
 
-    def set_original_path_on_nas(self, nas_root):
-        self._original_path = os.path.join(nas_root, self.full_path)
-
-    def set_original_path_on_dropbox(self, dropbox_root):
-        self._original_path = os.path.join(dropbox_root, self.full_path)
+    def prepend_original_path(self, root):
+        self._original_path = os.path.join(root, self.full_path)

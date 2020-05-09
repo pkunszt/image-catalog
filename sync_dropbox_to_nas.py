@@ -1,8 +1,8 @@
 import argparse
 from tools import elastic_arguments, root_arguments
 from catalog import CatalogDropbox
-from elastic import Retrieve
-from data import DBoxError
+from elastic import Retrieve, Delete
+from data import DBoxError, DBoxNoFileError
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="""Scan the catalog for entries where the dropbox copy is there
@@ -19,6 +19,7 @@ if __name__ == '__main__':
 
     cat_folder = CatalogDropbox(args.host, args.port, index=index, nas=True)
     retrieve = Retrieve(cat_folder.connection)
+    delete = Delete(cat_folder.connection)
 
     if args.nas_root:
         cat_folder.nas_root = args.nas_root
@@ -27,9 +28,13 @@ if __name__ == '__main__':
 
     n = 0
     for entry in retrieve.on_dropbox_but_not_on_nas(args.limit):
-        entry.set_original_path_on_dropbox(cat_folder.dropbox_root)
+        entry.prepend_original_path(cat_folder.dropbox_root)
         try:
             cat_folder.download_item(entry)
+        except DBoxNoFileError as e:
+            print(e)
+            print("file is in the catalog but not on dropbox. removing from catalog")
+            delete.id(entry.id)
         except DBoxError as e:
             print("Ignoring : ", str(e))
         else:

@@ -6,6 +6,7 @@ def elastic_arguments(parser):
 
 def upload_arguments(parser):
     parser.add_argument('--recursive', '-r', action='store_true', help='Recurse into subdirectories. Defaults to FALSE')
+    parser.add_argument('--move', '-m', action='store_true', help='Move the files, don\'t just copy them')
     parser.add_argument('--quiet', '-q', action='store_true', help='Recurse into subdirectories. Defaults to FALSE')
     parser.add_argument('--dryrun', '-d', action='store_true', help="""Do a dry run only, print what would be done. 
     Defaults to FALSE""")

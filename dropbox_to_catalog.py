@@ -1,4 +1,3 @@
-import os
 import sys
 import argparse
 from tools import elastic_arguments, upload_arguments, root_arguments
@@ -14,6 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('directory', type=str, help='Full path of dropbox directory to load.')
     upload_arguments(parser)
     parser.add_argument('--nas', action='store_true', help='Also create the NAS copy. Defaults to FALSE')
+    parser.add_argument('--limit', '-l', type=int, help='Limit the number of files processed', default=None)
     root_arguments(parser)
     elastic_arguments(parser)
     args = parser.parse_args()
@@ -23,7 +23,7 @@ if __name__ == '__main__':
         index = args.index
 
     cat_folder = CatalogDropbox(args.host, args.port, index=index, nas=args.nas, verbose=not args.quiet,
-                                dryrun=args.dryrun)
+                                dryrun=args.dryrun, move_files=args.move)
     if args.nas_root:
         cat_folder.nas_root = args.nas_root
     if args.dropbox_root:
@@ -33,7 +33,7 @@ if __name__ == '__main__':
         print(f"Invalid directory {args.directory}")
         sys.exit(-1)
 
-    c = cat_folder.catalog_dir(args.directory, recurse=args.recursive)
+    c = cat_folder.catalog_dir(args.directory, recurse=args.recursive, limit=args.limit)
 
     if not args.quiet:
         if args.dryrun:

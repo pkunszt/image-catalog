@@ -1,4 +1,6 @@
 import os
+import pathlib
+import time
 
 import dropbox
 import dropbox.files
@@ -11,10 +13,18 @@ class DBoxError(dropbox.exceptions.DropboxException):
         super().__init__(message)
 
 
+class DBoxNoFileError(DBoxError):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
 class DBox:
     _config: dict = None
     _full_dbox: dropbox.Dropbox = None
     _catalog_dbox: dropbox.Dropbox = None
+    _copy_batch_list: list = None
+    _copy_to_folders: set = None
+    _move_batch: bool = False
     UPLOAD_SIZE: int = 50 * 1024 * 1024
     MAX_SIZE: int = 100 * 1024 * 1024
 
@@ -40,16 +50,29 @@ class DBox:
             DBox._catalog_dbox = dropbox.Dropbox(DBox._get_config()['dbox_catalog_token'])
         return DBox._catalog_dbox
 
-    def list_dir(self, path: str, recurse: bool = False) -> str:
-        result_list = self._dbox.files_list_folder(path, recursive=recurse)
+    def list_dir(self, path: str, recurse: bool = False, limit: int = None, path_only: bool = True):
+        local_limit = 0
+        result_list = self._dbox.files_list_folder(path, recursive=recurse, limit=limit)
         for item in result_list.entries:
             if type(item) is dropbox.files.FileMetadata:
-                yield item.path_display
-        while result_list.has_more:
+                if path_only:
+                    yield item.path_display
+                else:
+                    yield item
+                local_limit += 1
+                if limit is not None and local_limit > limit:
+                    break
+        while result_list.has_more and ((limit is not None and local_limit <= limit) or limit is None):
             result_list = self._dbox.files_list_folder_continue(result_list.cursor)
             for item in result_list.entries:
                 if type(item) is dropbox.files.FileMetadata:
-                    yield item.path_display
+                    if path_only:
+                        yield item.path_display
+                    else:
+                        yield item
+                    local_limit += 1
+                    if limit is not None and local_limit > limit:
+                        break
 
     def get_metadata(self, path: str) -> dict:
         file_metadata = self._dbox.files_get_metadata(path, include_media_info=True)
@@ -76,8 +99,8 @@ class DBox:
 
         return result
 
-    def entries_in_dir(self, path: str, recurse: bool = False) -> dict:
-        for file in self.list_dir(path, recurse):
+    def entries_in_dir(self, path: str, recurse: bool = False, limit: int = None) -> dict:
+        for file in self.list_dir(path, recurse, limit):
             yield self.get_metadata(file)
 
     def exists(self, path) -> bool:
@@ -141,9 +164,69 @@ class DBox:
                 raise ValueError("Problem")
             self._dbox.files_upload_session_finish(contents, cursor, commit)
 
+    def copy_batch_init(self, move: bool = False):
+        if self._copy_to_folders:
+            self._copy_to_folders.clear()
+        else:
+            self._copy_to_folders = set()
+        if self._copy_batch_list:
+            self._copy_batch_list.clear()
+        else:
+            self._copy_batch_list = []
+        self._move_batch = move
+
+    def add_copy_batch(self, from_path, to_path):
+        self._copy_batch_list.append(dropbox.files.RelocationPath(from_path, to_path))
+        self._copy_to_folders.add(os.path.basename(to_path))
+
+    def create_target_dirs(self):
+        dirs = sorted(list(self._copy_to_folders), key=(lambda item: len(item)))
+        for folder in dirs:
+            if not self.is_dir(folder):
+                if not self.exists(folder):
+                    self._dbox.files_create_folder_v2(folder)
+                else:
+                    raise DBoxError(f'Destination folder already exists as a file: ${folder}')
+
+    def do_copy_batch(self) -> list:
+        self.create_target_dirs()
+        if self._move_batch:
+            job = self._dbox.files_move_batch_v2(self._copy_batch_list)
+        else:
+            job = self._dbox.files_copy_batch_v2(self._copy_batch_list)
+
+        while not job.is_complete():
+            time.sleep(1000)
+
+        failed = []
+        result = job.get_complete()
+        for i, item in enumerate(result.entries):
+            if item.is_failure():
+                failed.append(i)
+                print(f"""Failed to ${"move" if self._move_batch else "copy"} file 
+                      {self._copy_batch_list[i].from_path} to {self._copy_batch_list[i].to_path}.
+                      Failure: ${repr(item.get_failure().getRelocationError())}""")
+
+        return [
+            self._copy_batch_list[item].from_path
+            for item in failed
+        ]
+
     def copy_file(self, from_path, to_path, create_folders: bool = False):
         try:
             self._dbox.files_copy_v2(from_path, to_path)
+        except dropbox.exceptions.ApiError as apie:
+            if create_folders:
+                err = apie.error
+                if err.get_path().is_not_found():
+                    self.create_folder(os.path.basename(to_path))
+                    self.copy_file(from_path, to_path)
+            else:
+                raise DBoxError(repr(apie))
+
+    def move_file(self, from_path, to_path, create_folders: bool = False):
+        try:
+            self._dbox.files_move_v2(from_path, to_path)
         except dropbox.exceptions.ApiError as apie:
             if create_folders:
                 err = apie.error
@@ -157,4 +240,21 @@ class DBox:
         self._dbox.files_create_folder_v2(path)
 
     def download_file(self, path, destination):
-        self._dbox.files_download_to_file(destination, path)
+        try:
+            self._dbox.files_download_to_file(destination, path)
+        except dropbox.exceptions.ApiError as apie:
+            error = apie.error
+            if type(error) == dropbox.files.DownloadError:
+                if error.is_path():
+                    if error.get_path().is_not_found():
+                        print(f"File not found on dropbox {path}")
+                        raise DBoxNoFileError(f"File not found on dropbox {path}")
+
+            raise DBoxError(repr(apie))
+        except FileNotFoundError:
+            # probably the directory locally does not exist yet
+            pathlib.Path(os.path.dirname(destination)).mkdir(parents=True, exist_ok=True)
+            self._dbox.files_download_to_file(destination, path)
+
+    def remove(self, path):
+        self._dbox.files_delete_v2(path)

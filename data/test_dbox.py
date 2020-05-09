@@ -1,7 +1,7 @@
 import datetime
 from unittest import TestCase
 import os
-from .dbox import DBox
+from .dbox import DBox, DBoxError, DBoxNoFileError
 from .factory import Factory, FactoryError
 from tools import TestConstants
 from .directory import Folder
@@ -84,3 +84,16 @@ class TestDBox(TestCase):
         d.put_file(filename, st.st_size,
                    os.path.join("/", TestConstants.testdir, "testsubdir"), "test.m4v",
                    datetime.datetime.utcfromtimestamp(st.st_mtime))
+
+    def test_successful_download(self):
+        d = DBox(True)
+        localname = '/Users/pkunszt/PycharmProjects/DedupImage/tst.jpeg'
+        d.download_file('/testfiles/spidey.jpeg', localname);
+        self.assertTrue(os.path.exists(localname))
+        os.remove(localname)
+
+    def test_download_fails(self):
+        d = DBox(True)
+        localname = '/Users/pkunszt/PycharmProjects/DedupImage/tst.jpeg'
+        self.assertRaises(DBoxNoFileError, d.download_file, '/testfiles/spidex.jpeg', localname)
+        self.assertRaises(DBoxError, d.download_file, '/testfiles/spidey.jpeg', '/Users/pkunszt/Pycharmxxx/test.jpg')

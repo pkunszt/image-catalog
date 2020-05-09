@@ -35,3 +35,9 @@ class Delete:
             err_str = "Failed Delete: expected "+str(len(array_of_ids))+" got "+str(result['deleted'])
             raise StorageError(err_str)
         return result['deleted']
+
+    def checksum(self, checksum: str) -> int:
+        result = self.elastic.delete_by_query(index=self.index, body={"query": {"term": {"checksum": checksum}}})
+        if len(result['failures']) > 0:
+            raise StorageError("Failed Delete " + result['failures'])
+        return result['deleted']

@@ -1,6 +1,6 @@
 import data
 import elastic
-import json
+from tools import read_config
 
 
 class Catalog:
@@ -16,10 +16,10 @@ class Catalog:
         if index:
             self._connection.index = index
         self._store = elastic.Store(self._connection)
+        self._delete = elastic.Delete(self._connection)
         self._dbox = data.DBox(True)
 
-        with open("./config.json", 'r') as file:
-            config = json.load(file)
+        config = read_config()
         self._nas_root = config['nas_root']
         self._dropbox_root = config['dropbox_root']
 
