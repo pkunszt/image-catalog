@@ -16,7 +16,6 @@ updated: int = 0
 deleted: int = 0
 loaded: int = 0
 total: int = 0
-recursive: bool = False
 nas_root: str = ""
 in_catalog_only: list = []
 in_catalog_only_checksums: set = set()
@@ -52,7 +51,7 @@ def check_files(dirname: str):
         for item in iterator:
             if item.name in Constants.ignored_paths:
                 continue
-            if item.is_dir() and recursive:
+            if item.is_dir():
                 check_files(item.path)
             elif item.is_file():
                 if item.path not in elastic_paths and relaxed_encoding_compares_false(item.path, elastic_paths):
@@ -86,7 +85,7 @@ def relaxed_encoding_compares_false(path: str, paths: set) -> bool:
 
 
 def main(arg):
-    global updated, deleted, loaded, store, reader, deleter, total, nas_root, recursive
+    global updated, deleted, loaded, store, reader, deleter, total, nas_root
 
     parser = argparse.ArgumentParser(
         description="""This tool will sync the catalog with the disk contents. The disk is taken as truth,
@@ -98,7 +97,6 @@ def main(arg):
     (change in size, modify time..)""")
     parser.add_argument('dirname', type=str, help='name of directory to look at')
     parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
-    parser.add_argument('--recursive', '-r', action='store_true', help='no verbose output')
     root_arguments(parser)
     elastic_arguments(parser)
     args = parser.parse_args(arg)
@@ -111,7 +109,6 @@ def main(arg):
         config = json.load(file)
     nas_root = config['nas_root'] if not args.nas_root else args.nas_root
 
-    recursive = args.recursive
     if not args.quiet:
         print(f"Checking catalog on {connection.host}:{connection.port} with index {connection.index}")
 
@@ -149,6 +146,7 @@ def main(arg):
                 yes = input("Load into catalog y/n?")
                 if yes.lower().startswith('y'):
                     new_file.path = new_file.path[len(nas_root) + 1:]
+                    new_file.nas = True
                     store_list.append(new_file)
                     loaded += 1
 
