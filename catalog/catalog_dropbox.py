@@ -32,7 +32,8 @@ class CatalogDropbox(Catalog):
         stored_files = self._store.list(self._folder.files, dryrun=self._dryrun)
         if self._verbose and not self._dryrun:
             self.print_target_dirs(stored_files)
-        self.copy_to_dropbox_catalog(stored_files)
+        if len(stored_files) > 0:
+            self.copy_to_dropbox_catalog(stored_files)
         if self._nas and not self._dryrun:
             self.download_to_nas(stored_files)
         return len(stored_files)

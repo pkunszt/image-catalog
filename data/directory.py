@@ -61,7 +61,10 @@ class Folder:
     def dbox_stream(self, iterable) -> None:
         """Read from an iterator. We expect each element to be already being an entry that we can add to
         the file list"""
+        count = 0
+        print("Reading ..", end='', flush=True)
         for obj in iterable:
+            count += 1
             try:
                 item = Factory.from_dropbox(obj)
                 self.__file_list.append(item)
@@ -70,6 +73,9 @@ class Folder:
                 self.__invalid_types_found.add(os.path.splitext(item.path.lower())[1])
             except FactoryZeroFileSizeError:
                 pass    # ignore files of zero size
+            if count % 10 == 0:
+                print(".", end='', flush=True)
+        print(f"done reading {count} files")
 
     @property
     def invalid_types(self) -> set:

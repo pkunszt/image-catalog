@@ -27,7 +27,7 @@ def walktree(directory_name: str, use_list: list, start: int, counter: int = 0):
 
     counter += len(use_list)
     if counter > loading_bar:
-        print(loading_bar, end='..')
+        print(loading_bar, end='..', flush=True)
         loading_bar += loading_increase
 
 

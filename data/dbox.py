@@ -5,7 +5,7 @@ import time
 import dropbox
 import dropbox.files
 import dropbox.exceptions
-import json
+from tools.read_config import read_config
 
 
 class DBoxError(dropbox.exceptions.DropboxException):
@@ -34,8 +34,7 @@ class DBox:
     @staticmethod
     def _get_config():
         if not DBox._config:
-            with open("./config.json", 'r') as fp:
-                DBox._config = json.load(fp)
+            DBox._config = read_config()
         return DBox._config
 
     @staticmethod
@@ -105,29 +104,18 @@ class DBox:
 
     def exists(self, path) -> bool:
         """Check if a path (directory or file) exists."""
-        try:
-            self._dbox.files_get_metadata(path)
-        except dropbox.exceptions.ApiError as apie:
-            err = apie.error
-            if err.get_path().is_not_found():
-                return False
-            else:
-                raise DBoxError(repr(err))
+        if path[0] == '/':
+            return os.path.exists(os.path.join(DBox._get_config()['dropbox_local_root'], path[1:]))
         else:
-            return True
+            return os.path.exists(os.path.join(DBox._get_config()['dropbox_local_root'], path))
 
-    def is_dir(self, path) -> bool:
+    @staticmethod
+    def is_dir(path: str) -> bool:
         """Check if a path is a directory. If the path does not exist, it just returns false"""
-        try:
-            self._dbox.files_list_folder(path, recursive=False, include_deleted=False)
-        except dropbox.exceptions.ApiError as apie:
-            err = apie.error
-            if err.get_path().is_not_folder() or err.get_path().is_not_found():
-                return False
-            else:
-                raise DBoxError(repr(err))
+        if path[0] == '/':
+            return os.path.isdir(os.path.join(DBox._get_config()['dropbox_local_root'], path[1:]))
         else:
-            return True
+            return os.path.isdir(os.path.join(DBox._get_config()['dropbox_local_root'], path))
 
     def put_file(self, source: str, size: int, dest_dir: str, dest_name: str, modified):
         if not self.exists(dest_dir):
@@ -177,13 +165,14 @@ class DBox:
 
     def add_copy_batch(self, from_path, to_path):
         self._copy_batch_list.append(dropbox.files.RelocationPath(from_path, to_path))
-        self._copy_to_folders.add(os.path.basename(to_path))
+        self._copy_to_folders.add(os.path.dirname(to_path))
 
     def create_target_dirs(self):
         dirs = sorted(list(self._copy_to_folders), key=(lambda item: len(item)))
         for folder in dirs:
             if not self.is_dir(folder):
                 if not self.exists(folder):
+                    print(f"Creating {folder}..")
                     self._dbox.files_create_folder_v2(folder)
                 else:
                     raise DBoxError(f'Destination folder already exists as a file: ${folder}')
@@ -195,9 +184,21 @@ class DBox:
         else:
             job = self._dbox.files_copy_batch_v2(self._copy_batch_list)
 
+        job_id = job.get_async_job_id()
+        print("working..", end='', flush=True)
+        counter = 0
         while not job.is_complete():
-            time.sleep(1000)
+            time.sleep(4)
+            counter += 1
+            print('.', end='', flush=True)
+            if counter % 50 == 0:
+                print('.')
+            if self._move_batch:
+                job = self._dbox.files_move_batch_check_v2(job_id)
+            else:
+                job = self._dbox.files_copy_batch_check_v2(job_id)
 
+        print('done')
         failed = []
         result = job.get_complete()
         for i, item in enumerate(result.entries):
