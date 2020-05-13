@@ -1,6 +1,7 @@
 import os
 import argparse
 import sys
+import shutil
 
 from data import Factory, Entry, FactoryError, DBox
 from tools import elastic_arguments, root_arguments, read_config
@@ -13,12 +14,15 @@ global local_limit
 def process_item(item):
     cat_item: Entry = next(reader.get_by_checksum(item.checksum), None)
     if cat_item:
-        if os.path.exists(os.path.join(config['nas_root'], cat_item.full_path)):
+        nas_path = os.path.join(config['nas_root'], cat_item.full_path)
+        if os.path.exists(nas_path):
             if not args.dryrun:
                 os.remove(item.full_path)
             print(f"Delete: {item.full_path}")
         else:
             print(f"****** NoFile!: {cat_item.full_path} although in catalog")
+            if not args.dryrun:
+                shutil.move(item.full_path, nas_path)
     else:
         print(f"NotCat: {item.full_path}")
 
