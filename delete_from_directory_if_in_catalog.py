@@ -100,7 +100,7 @@ if __name__ == '__main__':
         print("Invalid directory: Cannot run with a directory from inside NAS_ROOT")
         sys.exit(-1)
     elif args.dropbox and args.directory.startswith(config['dropbox_root']):
-        print("Invalid directory: Cannot run with a directory from inside NAS_ROOT")
+        print("Invalid directory: Cannot run with a directory from inside IMAGE_ROOT")
         sys.exit(-1)
 
     local_limit = 0

@@ -193,6 +193,8 @@ class Entry:
 
     @size.setter
     def size(self, size: int):
+        if size > 2 ** 31 - 1:  # max it out at elasitc int size. happens for a few videos.
+            size = 2 ** 31 - 2
         self._size = size
 
     @modified.setter
