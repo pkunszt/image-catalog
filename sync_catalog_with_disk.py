@@ -34,7 +34,7 @@ def check_catalog(elastic_entry):
     global deleted, updated
     path = os.path.join(nas_root, elastic_entry.full_path)
     if not os.path.isfile(path):
-        # print(f"In Catalog but not on disk: {elastic_entry.full_path}")
+        print(f"In Catalog but not on disk: {elastic_entry.full_path}")
         in_catalog_only.append(elastic_entry)
         in_catalog_only_checksums.add(elastic_entry.checksum)
     else:
@@ -97,6 +97,7 @@ def main(arg):
     (change in size, modify time..)""")
     parser.add_argument('dirname', type=str, help='name of directory to look at')
     parser.add_argument('--quiet', '-q', action='store_true', help='no verbose output')
+    parser.add_argument('--yes', '-y', action='store_true', help='answer yes to new catalog files')
     root_arguments(parser)
     elastic_arguments(parser)
     args = parser.parse_args(arg)
@@ -142,9 +143,11 @@ def main(arg):
                     found = True
                     break
             if not found:
-                print(f"File {new_file.full_path} is only on disk but not in Catalog")
-                yes = input("Load into catalog y/n?")
-                if yes.lower().startswith('y'):
+                yes = ""
+                if not args.yes:
+                    print(f"File {new_file.full_path} is only on disk but not in Catalog")
+                    yes = input("Load into catalog y/n?")
+                if args.yes or yes.lower().startswith('y'):
                     new_file.path = new_file.path[len(nas_root) + 1:]
                     new_file.nas = True
                     store_list.append(new_file)
